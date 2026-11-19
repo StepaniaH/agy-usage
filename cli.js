@@ -870,7 +870,7 @@ async function cmdCheck(customPath, cdpOptions = {}) {
   try {
     pluginVersion = JSON.parse(fs.readFileSync(path.join(__dirname, 'package.json'), 'utf8')).version || 'unknown';
   } catch {}
-  console.log(`🔍 [Antigravity 对话上下文查看器 v${pluginVersion}] 正在执行环境预检...`);
+  console.log(`🔍 [agy-usage v${pluginVersion}] 正在执行环境预检...`);
   console.log(`  - Node.js 运行时: ${process.version} (${process.execPath})`);
   try {
     const asarPath = findAsarPath(customPath);
