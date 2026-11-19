@@ -4,6 +4,12 @@
 
 A lightweight, local topbar overlay for the Antigravity desktop client on macOS and Linux. It adds four dedicated popovers for model quota, context window usage, generation speed, and cumulative token usage—built with zero npm dependencies and no outbound network requests.
 
+## Screenshots
+
+| Model Quota | Context Window |
+| :---: | :---: |
+| ![Model Quota](docs/screenshots/model-quota.png) | ![Context Window](docs/screenshots/context-window.png) |
+
 ## Features
 
 Four topbar indicators, each opening a focused popover:

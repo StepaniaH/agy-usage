@@ -4,6 +4,12 @@
 
 面向 macOS 和 Linux 的 Antigravity 桌面客户端顶栏监控面板。零外部 npm 依赖、无外网请求，在客户端顶栏提供模型额度、上下文窗口占用、生成速度与累计 Token 用量的实时视图。
 
+## 界面预览
+
+| 模型额度 | 上下文窗口 |
+| :---: | :---: |
+| ![模型额度](docs/screenshots/model-quota.png) | ![上下文窗口](docs/screenshots/context-window.png) |
+
 ## 功能概览
 
 顶栏提供四个独立入口，点击分别打开对应的专属浮层：
