@@ -198,7 +198,7 @@
   let activeCostModel = 'gemini-3.8-flash';
   let activeCostMode = 'ref';
 
-  const METER_RENDERER_VERSION = typeof METER_VERSION !== 'undefined' ? METER_VERSION : '0.8.8';
+  const METER_RENDERER_VERSION = typeof METER_VERSION !== 'undefined' ? METER_VERSION : '0.0.1';
   const backendStatus = {
     rendererVersion: METER_RENDERER_VERSION,
     backendSource: null,

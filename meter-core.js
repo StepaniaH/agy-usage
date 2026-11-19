@@ -2480,8 +2480,8 @@
       : (source === 'all' ? (payload.dailyModelMap || {}) : {});
 
     return {
-      schemaVersion: payload.schemaVersion || '0.8.8',
-      version: payload.version || '0.8.8',
+      schemaVersion: payload.schemaVersion || '0.0.1',
+      version: payload.version || '0.0.1',
       updatedAt: payload.updatedAt || '',
       firstUseDate: summary.firstUseDate,
       currentPeriod: payload.currentPeriod || {

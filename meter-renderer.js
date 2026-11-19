@@ -1,5 +1,5 @@
 (function () {
-  const METER_VERSION = '0.8.8';
+  const METER_VERSION = '0.0.1';
 
   'use strict';
   if ((location.protocol !== 'https:' && location.protocol !== 'http:') || location.hostname !== '127.0.0.1') return;
@@ -1853,7 +1853,7 @@
         data-i18n="settings.backBtn">← 返回</button>
       <span id="panel-main-title" class="panel-title-text"
         data-i18n="context.popover.title">上下文窗口</span>
-      <span id="v">v0.8.8</span>
+      <span id="v">v0.0.1</span>
       <span id="quota-plan-tier-pill" class="sr-only" hidden></span>
     </div>
     <div class="panel-header-actions">
@@ -3795,7 +3795,7 @@ function formatVendorLabel(vendor) {
   let activeCostModel = 'gemini-3.8-flash';
   let activeCostMode = 'ref';
 
-  const METER_RENDERER_VERSION = typeof METER_VERSION !== 'undefined' ? METER_VERSION : '0.8.8';
+  const METER_RENDERER_VERSION = typeof METER_VERSION !== 'undefined' ? METER_VERSION : '0.0.1';
   const backendStatus = {
     rendererVersion: METER_RENDERER_VERSION,
     backendSource: null,

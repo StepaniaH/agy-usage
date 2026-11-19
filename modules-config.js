@@ -10,8 +10,8 @@ const crypto = require('crypto');
 const { getStateDir, findAsarPath, loadAsarEngine, builtinAsar } = require('./asar-engine');
 const { safeWriteJsonSync } = require('./meter-storage');
 
-const SCHEMA_VERSION = '0.8.8';
-const FALLBACK_PROJECT_VERSION = '0.8.8';
+const SCHEMA_VERSION = '0.0.1';
+const FALLBACK_PROJECT_VERSION = '0.0.1';
 
 function resolveProjectVersion() {
   for (const pkgPath of [

@@ -1,6 +1,6 @@
 {
   "name": "agy-usage",
-  "version": "0.8.8",
+  "version": "0.0.1",
   "description": "Local context window, model quota, generation speed, and token usage overlay for Antigravity on macOS and Linux",
   "main": "cli.js",
   "bin": {

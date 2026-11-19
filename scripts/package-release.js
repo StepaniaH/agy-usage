@@ -55,7 +55,7 @@ function sha256File(filePath) {
 
 function getVersion() {
   const pkg = JSON.parse(fs.readFileSync(path.join(ROOT_DIR, 'package.json'), 'utf8'));
-  return pkg.version || '0.8.8';
+  return pkg.version || '0.0.1';
 }
 
 function packagePlatform(plat, version) {
