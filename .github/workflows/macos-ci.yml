@@ -1,0 +1,70 @@
+name: macOS Compatibility CI
+
+on:
+  push:
+    branches:
+      - "main"
+      - "ci/**"
+  pull_request:
+    branches:
+      - "main"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify-macos:
+    name: Verify macOS (${{ matrix.label }})
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - label: Apple Silicon (arm64 / macos-15)
+            runner: macos-15
+          - label: Intel (x86_64 / macos-15-intel)
+            runner: macos-15-intel
+
+    steps:
+      - name: Inspect Runner Hardware & OS
+        shell: bash
+        run: |
+          UNAME_INFO="$(uname -a)"
+          SW_INFO="$(sw_vers | tr '\n' ';')"
+          ARCH_INFO="$(arch)"
+          CPU_INFO="$(sysctl -n machdep.cpu.brand_string || echo unknown)"
+          echo "$UNAME_INFO"
+          echo "$SW_INFO"
+          echo "arch=$ARCH_INFO cpu=$CPU_INFO"
+
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Set up Python 3
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Run Full JS Test Suite & Renderer Build
+        shell: bash
+        run: npm test
+
+      - name: Run Python Attachment Scanner Tests
+        shell: bash
+        run: python3 -m unittest attachment_scan_test.py
+
+      - name: Verify Package Manifest & Cross-Platform Build
+        shell: bash
+        run: |
+          node scripts/check-release-manifest.js
+          npm run pack
+          unzip -l dist/release/agy-usage_*_darwin_arm64.zip | grep meter-renderer.js
+          unzip -l dist/release/agy-usage_*_darwin_amd64.zip | grep meter-renderer.js
+          cat dist/release/checksums.txt

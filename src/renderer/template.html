@@ -1,0 +1,1042 @@
+<!-- 顶部基本单元 0: 模型额度动态圆环入口（工具组最左侧） -->
+<button id="badge-quota" class="ag-unit ag-unit-quota" type="button" aria-label="模型剩余额度与重置状态"
+  data-i18n-aria="badge.quota.aria" aria-expanded="false" data-quota-state="unknown" title="模型额度看板">
+  <svg id="quota-ring-svg" class="quota-ring-svg" width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
+    <circle id="quota-ring-track" class="quota-ring-track" cx="9" cy="9" r="6.5" fill="none" stroke-width="2.1">
+    </circle>
+    <circle id="quota-ring-fill" class="quota-ring-fill" cx="9" cy="9" r="6.5" fill="none" stroke-width="2.1"
+      stroke-linecap="round" transform="rotate(-90 9 9)" stroke-dasharray="10 30.84" stroke-dashoffset="0"></circle>
+  </svg>
+  <span class="quota-badge-metric">
+    <span id="quota-badge-val" class="quota-badge-val" data-i18n="quota.state.unknown">未知</span>
+    <span id="quota-badge-tag" class="quota-badge-tag" hidden></span>
+  </span>
+</button>
+
+<!-- 顶部基本单元 1: 上下文动态小圆环（与速度入口紧邻） -->
+<button id="badge" class="ag-unit ag-unit-ring" type="button" aria-label="会话与上下文统计" data-i18n-aria="badge.aria"
+  aria-describedby="context-tooltip" aria-expanded="false">
+  <svg id="ring-svg" class="ring-svg" width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
+    <circle id="ring-track" class="ring-track" cx="9" cy="9" r="6.5" fill="none" stroke-width="2.1"></circle>
+    <circle id="ring-fill" class="ring-fill" cx="9" cy="9" r="6.5" fill="none" stroke-width="2.1" stroke-linecap="round"
+      transform="rotate(-90 9 9)" stroke-dasharray="3.2 4.97"></circle>
+  </svg>
+  <span id="badge-pct-val" class="badge-pct-val">--%</span>
+  <div id="bar-wrap" class="sr-only" aria-hidden="true">
+    <div id="bar-fill" class="meter-bar-fill"></div>
+  </div>
+  <span id="amount" class="sr-only" data-i18n="badge.reading">读取中…</span>
+  <span id="hover-wrap" class="sr-only"><span id="hover-extra"></span></span>
+</button>
+
+<!-- 顶部基本单元 2: 输出速度 (tok/s) -->
+<button id="badge-speed" class="ag-unit" type="button" aria-label="模型输出速度与耗时统计" data-i18n-aria="badge.speed.aria"
+  aria-expanded="false">
+  <span id="badge-speed-icon" class="speed-icon" aria-hidden="true"><svg viewBox="0 0 16 16" width="13" height="13"
+      fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"
+      aria-hidden="true">
+      <path d="M9.2 1.8L3.6 9h4.1l-.9 5.2L12.4 7H8.3l.9-5.2z"></path>
+    </svg></span>
+  <span id="speed-amount">-- tok/s</span>
+  <span id="speed-hover-extra" class="sr-only"></span>
+</button>
+
+<!-- 顶部基本单元 3: 累计 Token 用量（细线统计图标） -->
+<button id="badge-tokens" class="ag-unit" type="button" aria-label="Token 用量一览" data-i18n-aria="badge.tokens.aria"
+  aria-expanded="false">
+  <span class="token-fire-dot" aria-hidden="true"><svg viewBox="0 0 16 16" width="13" height="13" fill="none"
+      stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M3 13V9M8 13V4M13 13V7"></path>
+    </svg></span>
+  <span id="token-amount">--</span>
+  <span id="token-hover-extra" class="sr-only"></span>
+</button>
+
+<!-- 顶部基本单元 4: 一键启动 CLI 模式 -->
+<button id="badge-cli" class="ag-unit" type="button" aria-label="启动 CLI" data-i18n-aria="badge.cli.aria"
+  title="一键启动 Antigravity CLI 终端（自动进入当前项目目录）" data-i18n-title="badge.cli.title">
+  <span class="cli-icon" aria-hidden="true">&gt;_</span>
+  <span id="cli-label">CLI</span>
+</button>
+
+<!-- 顶部基本单元 5: 窄屏或隐藏项兜底溢出菜单按钮 -->
+<button id="badge-overflow" class="ag-unit" type="button" aria-label="更多统计指标" data-i18n-aria="badge.overflow.aria"
+  aria-expanded="false">
+  <svg class="overflow-icon" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+    <circle cx="3.5" cy="8" r="1.25"></circle>
+    <circle cx="8" cy="8" r="1.25"></circle>
+    <circle cx="12.5" cy="8" r="1.25"></circle>
+  </svg>
+</button>
+
+<!-- CLI 启动反馈提示气泡 -->
+<div id="cli-launch-toast" hidden role="status" aria-live="polite"></div>
+
+<!-- 上下文圆环悬停/聚焦信息气泡 -->
+<div id="context-tooltip" role="tooltip" data-visible="false" data-placement="bottom">
+  <div id="ctx-tip-title" class="ctx-tip-title" data-i18n="tip.title.default">上下文窗口：</div>
+  <div id="ctx-tip-pct" class="ctx-tip-pct" data-i18n="tip.pct.notReady">数据尚未就绪</div>
+  <div id="ctx-tip-detail" class="ctx-tip-detail" data-i18n="tip.detail.loading">正在读取当前会话上下文用量…</div>
+</div>
+
+<!-- 窄屏与已隐藏顶栏项兜底菜单 -->
+<div id="overflow-menu" hidden aria-label="更多统计快捷菜单" data-i18n-aria="overflow.aria">
+  <button id="overflow-quota-btn" class="overflow-item" type="button">
+    <span class="overflow-item-label">
+      <svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+        <circle cx="8" cy="8" r="5.5" stroke-opacity="0.28"></circle>
+        <path d="M8 2.5A5.5 5.5 0 1 1 2.8 9.8" stroke-linecap="round"></path>
+      </svg>
+      <span data-i18n="overflow.quota">模型额度</span>
+    </span>
+    <span id="overflow-quota-val" class="overflow-item-val">--</span>
+  </button>
+  <button id="overflow-context-btn" class="overflow-item" type="button">
+    <span class="overflow-item-label">
+      <svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+        <circle cx="8" cy="8" r="5.5" stroke-opacity="0.28"></circle>
+        <path d="M8 2.5A5.5 5.5 0 0 1 13.5 8" stroke-linecap="round"></path>
+      </svg>
+      <span data-i18n="overflow.context">上下文窗口</span>
+    </span>
+    <span id="overflow-context-val" class="overflow-item-val">--%</span>
+  </button>
+  <button id="overflow-speed-btn" class="overflow-item" type="button">
+    <span class="overflow-item-label">
+      <svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.6"
+        stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M9.2 1.8L3.6 9h4.1l-.9 5.2L12.4 7H8.3l.9-5.2z"></path>
+      </svg>
+      <span data-i18n="overflow.speed">输出速度</span>
+    </span>
+    <span id="overflow-speed-val" class="overflow-item-val">-- tok/s</span>
+  </button>
+  <button id="overflow-tokens-btn" class="overflow-item" type="button">
+    <span class="overflow-item-label">
+      <svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true">
+        <path d="M3 13V9M8 13V4M13 13V7"></path>
+      </svg>
+      <span data-i18n="overflow.tokens">累计用量</span>
+    </span>
+    <span id="overflow-tokens-val" class="overflow-item-val">--</span>
+  </button>
+  <button id="overflow-cli-btn" class="overflow-item" type="button">
+    <span class="overflow-item-label"><span class="cli-icon">&gt;_</span><span data-i18n="overflow.cli">启动 CLI 终端</span></span>
+    <span id="overflow-cli-val" class="overflow-item-val">agy</span>
+  </button>
+</div>
+
+<!-- 热力图浮动 Tooltip -->
+<div class="heat-popover" id="heat-pop">
+  <div class="pop-date" id="heat-pop-date">10月24日</div>
+  <div class="pop-val" id="heat-pop-val">2.47亿 个 Token</div>
+  <div class="pop-det" id="heat-pop-det"></div>
+</div>
+
+<!-- 一对一专属浮层外壳 (#panel: 按所点顶栏胶囊精准锚定并切换为对应单一领域专属视图，无跨界总 Tab 栏) -->
+<section id="panel" class="ag-panel ag-panel-flex" hidden aria-label="指标详情浮层" data-i18n-aria="panel.wb.aria">
+  <!-- 极简统一标题栏：专属标题 | 场景辅助操作 + 设置 + 关闭 -->
+  <div class="panel-header-bar">
+    <div class="panel-title">
+      <button id="btn-ctx-settings-back" class="switch-pill-btn settings-header-back-btn" type="button" hidden
+        data-i18n="settings.backBtn">← 返回</button>
+      <span id="panel-main-title" class="panel-title-text"
+        data-i18n="context.popover.title">上下文窗口</span>
+      <span id="v">v0.8.8</span>
+      <span id="quota-plan-tier-pill" class="sr-only" hidden></span>
+    </div>
+    <div class="panel-header-actions">
+      <!-- 仅在「上下文窗口」专属浮层显示的轻量双切换：[当前会话 | 窗口规格] -->
+      <div id="ctx-tabs-bar" class="ctx-segmented ctx-header-subswitch" role="tablist" aria-label="上下文视图切换"
+        data-i18n-aria="tabs.aria">
+        <button id="tab-ctx-session" class="ctx-seg-btn active" type="button" role="tab" aria-selected="true"
+          data-ctx-submode="session" data-i18n="ctx.sub.session">当前会话</button>
+        <button id="tab-ctx-models" class="ctx-seg-btn" type="button" role="tab" aria-selected="false"
+          data-ctx-submode="models" data-i18n="ctx.sub.specs">窗口规格</button>
+      </div>
+
+      <!-- 仅在「模型额度」专属浮层显示的精简更新时间与手动刷新操作 -->
+      <span id="quota-refresh-feedback" class="quota-refresh-feedback" hidden
+        data-i18n="quota.refresh.upToDate">已更新</span>
+      <span id="quota-time-updated" class="quota-header-updated" hidden>—</span>
+      <button id="btn-quota-refresh" class="panel-icon-btn quota-refresh-btn" type="button" hidden aria-label="手动刷新模型额度"
+        data-i18n-aria="quota.refresh.aria" title="手动刷新模型额度" data-i18n-title="quota.refresh.aria">
+        <span class="quota-refresh-icon" aria-hidden="true">↻</span>
+        <span id="quota-refresh-text" data-i18n="quota.refresh.btn">刷新</span>
+      </button>
+
+      <!-- 全局统一设置与关闭入口 -->
+      <button id="btn-ctx-settings" class="panel-icon-btn wb-settings-btn" type="button" aria-pressed="false"
+        aria-label="面板与顶栏设置" data-i18n-aria="settings.paneTitle" title="面板与顶栏设置"
+        data-i18n-title="settings.paneTitle"><svg viewBox="0 0 16 16" width="14" height="14" fill="none"
+          stroke="currentColor" stroke-width="1.45" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="8" cy="8" r="2.2"></circle>
+          <path
+            d="M7.01 3.25L7.21 1.75H8.79L8.99 3.25L10.66 3.94L11.86 3.02L12.98 4.14L12.06 5.34L12.75 7.01L14.25 7.21V8.79L12.75 8.99L12.06 10.66L12.98 11.86L11.86 12.98L10.66 12.06L8.99 12.75L8.79 14.25H7.21L7.01 12.75L5.34 12.06L4.14 12.98L3.02 11.86L3.94 10.66L3.25 8.99L1.75 8.79V7.21L3.25 7.01L3.94 5.34L3.02 4.14L4.14 3.02L5.34 3.94Z">
+          </path>
+        </svg></button>
+      <button id="close" class="panel-icon-btn" type="button" aria-label="收起详情"
+        data-i18n-aria="header.close.aria">×</button>
+    </div>
+  </div>
+
+  <!-- ========================================================= -->
+  <!-- 专属浮层 1 (对应 #badge-quota): 模型额度 (460px)            -->
+  <!-- ========================================================= -->
+  <div id="panel-quota" class="wb-tab-pane" role="region" aria-label="模型额度" hidden>
+    <div id="view-quota" class="quota-panel-body">
+      <div id="quota-banner" class="quota-banner" hidden>
+        <span id="quota-banner-text"></span>
+        <button id="btn-quota-banner-retry" class="switch-pill-btn" type="button" data-i18n="quota.retry">重试</button>
+        <button id="btn-quota-banner-restart" class="switch-pill-btn active" type="button" hidden
+          data-i18n="quota.restartBtn">重启客户端</button>
+      </div>
+
+      <!-- 套餐等级与 Prompt / Flow Credits 概览 -->
+      <div id="quota-plan-credits-card" class="quota-plan-credits-card">
+        <div class="quota-plan-top-row">
+          <div class="quota-plan-identity">
+            <span class="quota-plan-name" id="p-det-name">Google AI Pro</span>
+            <span class="quota-plan-email" id="p-det-account">—</span>
+            <span id="plan-summary-text" class="sr-only"></span>
+            <span id="p-det-credits" class="sr-only" hidden>—</span>
+          </div>
+        </div>
+        <div class="quota-credits-grid">
+          <div class="quota-credit-item">
+            <span class="quota-credit-lbl" data-i18n="plan.dt.promptCredits">Prompt 池</span>
+            <span class="quota-credit-val" id="p-det-prompt-credits">—</span>
+          </div>
+          <div class="quota-credit-item">
+            <span class="quota-credit-lbl" data-i18n="plan.dt.flowCredits">Flow 池</span>
+            <span class="quota-credit-val" id="p-det-flow-credits">—</span>
+          </div>
+        </div>
+      </div>
+
+      <div id="quota-current-card" class="quota-current-card">
+        <div class="key-header quota-cur-header">
+          <div class="quota-cur-main quota-cur-header-main">
+            <div class="ctx-small-label quota-cur-label quota-cur-eyebrow" data-i18n="quota.current.label">当前会话模型</div>
+            <div id="quota-cur-model" class="quota-cur-model-name">—</div>
+            <div id="quota-cur-pool" class="quota-cur-pool-sub"></div>
+            <div id="quota-cur-est" class="quota-cur-est" hidden></div>
+          </div>
+          <div class="quota-cur-hero-right">
+            <span id="quota-cur-hero-pct" class="quota-hero-pct" hidden>—</span>
+            <span id="quota-cur-status" class="key-pill pill-muted">未知</span>
+          </div>
+        </div>
+        <div id="quota-cur-alert" class="quota-cur-alert" hidden></div>
+        <div id="quota-cur-buckets" class="quota-buckets-list"></div>
+      </div>
+
+      <div class="quota-pools-header">
+        <span class="quota-subsec-title quota-pools-title"
+          data-i18n="quota.pools.heading">额度池</span>
+      </div>
+      <div id="quota-pools-list" class="quota-pools-list"></div>
+    </div>
+  </div>
+
+  <!-- ========================================================= -->
+  <!-- 专属浮层 2A (对应 #badge -> 当前会话): 上下文窗口 (460px)     -->
+  <!-- ========================================================= -->
+  <div id="pane-ctx-session" class="wb-tab-pane ctx-tab-pane" role="region" aria-labelledby="tab-ctx-session">
+    <!-- 卡片 1: 上下文窗口容量与会话估值 -->
+    <div id="key-summary">
+      <div class="key-header key-summary-hero-header">
+        <div class="key-title-stack">
+          <span class="key-title" data-i18n="session.keySummary.title">当前窗口占用</span>
+          <span id="key-hero-pct" class="ctx-hero-pct" hidden>—</span>
+        </div>
+        <span id="key-badge" class="key-pill pill-muted" data-i18n="session.badge.reading">读取中</span>
+      </div>
+      <div class="key-bar-track">
+        <div id="key-bar-fill" class="key-bar-fill"></div>
+      </div>
+      <div class="key-stats">
+        <div class="key-stat">
+          <div class="key-stat-label" data-i18n="session.stat.used">当前已用</div>
+          <div id="key-used" class="key-stat-val">—</div>
+        </div>
+        <div class="key-stat">
+          <div class="key-stat-label" data-i18n="session.stat.limit">预算上限</div>
+          <div id="key-limit" class="key-stat-val">—</div>
+        </div>
+        <div class="key-stat">
+          <div class="key-stat-label" data-i18n="session.stat.remaining">剩余可用</div>
+          <div id="key-remaining" class="key-stat-val">—</div>
+        </div>
+      </div>
+      <div id="key-takeaway" class="key-takeaway" hidden data-i18n="session.keyTakeaway.loading">正在计算核心指标…</div>
+      <div id="round-cost-bar" class="round-cost-bar round-cost-footer" title="当前模型调用的 API 等值参考金额"
+        data-i18n-title="session.costBar.title">
+        <span id="round-cost-text" class="round-cost-primary" data-i18n="session.roundCost.dash">本轮估值：—</span>
+        <span id="session-cost-text" class="round-cost-secondary" data-i18n="session.sessionCost.dash">当前会话合计：—</span>
+      </div>
+    </div>
+
+    <!-- 卡片 2: 最新模型调用与当前会话请求时间线（速度详情已独立至生成速度专属浮层） -->
+    <div id="latest-call-card" class="latest-call-card" hidden>
+      <div class="latest-call-header">
+        <div class="latest-call-title-wrap">
+          <span class="latest-call-title" data-i18n="session.latestCall.title">最新调用</span>
+          <span id="latest-call-status-pill" class="key-pill pill-muted">--</span>
+          <span id="latest-call-agent-pill" class="call-agent-badge" hidden>主代理</span>
+        </div>
+        <div class="latest-call-actions">
+          <span id="latest-call-time" class="latest-call-time">—</span>
+          <button id="btn-session-history-toggle" class="latest-call-link-btn" type="button" aria-expanded="false"
+            data-i18n="session.timeline.viewHistory">查看历史</button>
+        </div>
+      </div>
+
+      <button id="latest-call-new-banner" class="latest-call-new-banner" type="button" hidden
+        data-i18n="session.latestCall.newAvailable">有新调用完成 · 点击查看最新</button>
+
+      <div id="latest-call-body" class="latest-call-body">
+        <div id="latest-call-summary-row" class="latest-call-summary-row" role="button" tabindex="0"
+          aria-expanded="false">
+          <div class="latest-call-model-wrap">
+            <span id="latest-call-model" class="latest-call-model">—</span>
+            <span id="latest-call-effort" class="call-effort-tag" hidden>—</span>
+          </div>
+          <div class="latest-call-metrics">
+            <span id="latest-call-score-inline" class="call-score-badge" hidden>—</span>
+            <span id="latest-call-tokens-inline" class="latest-call-metric-item">—</span>
+            <span id="latest-call-cache-inline" class="latest-call-metric-item">—</span>
+            <span id="latest-call-duration-inline" class="latest-call-metric-item">—</span>
+          </div>
+          <span id="btn-latest-call-toggle" class="latest-call-expand-caret" aria-hidden="true">▾</span>
+        </div>
+
+        <div id="latest-call-details" class="latest-call-details" style="display:none;">
+          <div class="call-detail-grid" id="latest-call-detail-grid"></div>
+          <div id="latest-call-error-box" class="call-detail-error" hidden></div>
+        </div>
+      </div>
+
+      <div id="session-timeline-drawer" class="session-timeline-drawer" style="display:none;">
+        <div id="session-timeline-summary" class="session-timeline-summary"></div>
+        <div id="session-timeline-list" class="session-timeline-list"></div>
+        <div id="session-timeline-unlinked" class="session-timeline-unlinked" hidden></div>
+        <div id="session-timeline-more-wrap" class="session-timeline-more-wrap" hidden>
+          <button id="btn-timeline-load-more" class="ctx-compact-link-btn" type="button"
+            data-i18n="session.timeline.loadMore">加载更多轮次</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 折叠抽屉: 底层技术参数与附件审计 -->
+    <div class="tech-drawer">
+      <button id="btn-toggle-details" class="drawer-trigger" aria-expanded="false" type="button">
+        <span class="drawer-trigger-left">
+          <span data-i18n="session.techDrawer.title">底层技术参数与附件审计</span>
+        </span>
+        <span id="drawer-arrow" class="drawer-arrow" data-i18n="session.techDrawer.expand">▼ 点击展开明细</span>
+      </button>
+      <div id="drawer-body" class="drawer-body" style="display:none;">
+        <p id="status" data-i18n="session.tech.checking">正在核对请求和附件…</p>
+        <p id="model"></p>
+        <h4 data-i18n="session.tech.latestReq">最近一次请求</h4>
+        <dl>
+          <dt data-i18n="session.tech.reqStatus">请求状态</dt>
+          <dd id="request-status">—</dd>
+          <dt data-i18n="session.tech.actual">实返输入＋输出</dt>
+          <dd id="actual">—</dd>
+          <dt data-i18n="session.tech.estimate">客户端估算</dt>
+          <dd id="estimate">—</dd>
+          <dt data-i18n="session.tech.budget">客户端预算</dt>
+          <dd id="budget">—</dd>
+          <dt data-i18n="session.tech.serviceLimit">服务端报错上限</dt>
+          <dd id="service-limit">—</dd>
+          <dt data-i18n="session.tech.percent">预算占比</dt>
+          <dd id="percent">—</dd>
+        </dl>
+        <h4 data-i18n="session.tech.sessionHeading">会话累计内容 · 本地估算</h4>
+        <dl>
+          <dt data-i18n="session.tech.sessionTotal">可读文本估算</dt>
+          <dd id="session-total" data-i18n="session.tech.scanning">扫描中…</dd>
+          <dt data-i18n="session.tech.characters">读取字符数</dt>
+          <dd id="characters">—</dd>
+          <dt data-i18n="session.tech.user">用户消息</dt>
+          <dd id="user">—</dd>
+          <dt data-i18n="session.tech.assistant">模型回复</dt>
+          <dd id="assistant">—</dd>
+          <dt data-i18n="session.tech.thinking">思考内容</dt>
+          <dd id="thinking">—</dd>
+          <dt data-i18n="session.tech.tools">工具调用与输出</dt>
+          <dd id="tools">—</dd>
+          <dt data-i18n="session.tech.summaries">压缩摘要</dt>
+          <dd id="summaries">—</dd>
+          <dt data-i18n="session.tech.system">系统提示与工具</dt>
+          <dd id="system">—</dd>
+          <dt data-i18n="session.tech.attachments">附件文本</dt>
+          <dd id="attachment-total">—</dd>
+          <dt data-i18n="session.tech.steps">步骤完整性</dt>
+          <dd id="steps">—</dd>
+        </dl>
+        <p id="coverage"></p>
+        <h4 data-i18n="session.tech.filesHeading">附件逐项检查</h4>
+        <div id="files"></div>
+        <button id="refresh" type="button" data-i18n="session.tech.rescan">重新扫描会话与附件</button>
+        <p id="note" data-i18n-html="session.tech.note">会话累计文本与附件 Token 为本地估算。</p>
+        <p id="updated"></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================= -->
+  <!-- 专属浮层 2B (对应 #badge -> 窗口规格): 各模型上下文窗口上限  -->
+  <!-- ========================================================= -->
+  <div id="pane-ctx-models" class="wb-tab-pane ctx-tab-pane" role="region" aria-labelledby="tab-ctx-models" hidden>
+    <div id="subpane-model-specs">
+      <div class="ctx-models-toolbar" id="ctx-models-toolbar" hidden>
+        <select id="ctx-model-select" class="ctx-model-select" aria-label="查看模型" data-i18n-aria="panel.ctx.viewModel"
+          style="display:none"></select>
+        <button id="btn-ctx-back-current" class="ctx-mini-link-btn" type="button" hidden title="回到当前会话正在使用的模型"
+          data-i18n="panel.ctx.backCurrent" data-i18n-title="panel.ctx.backCurrentTitle">回到当前模型</button>
+      </div>
+
+      <div id="ctx-model-list" class="ctx-model-list" aria-label="按厂商分组的模型产品列表" data-i18n-aria="models.list.aria"></div>
+
+      <div id="ctx-model-card" class="ctx-detail-card">
+        <div class="ctx-card-top">
+          <div class="ctx-card-vendor-row">
+            <span class="ctx-card-vendor-left">
+              <span id="ctx-card-vendor-dot" class="ag-vendor-dot"></span>
+              <span id="ctx-card-vendor-name" class="ctx-card-vendor-name">—</span>
+            </span>
+            <span id="ctx-card-quota-slot" class="ctx-card-quota-slot" hidden></span>
+          </div>
+          <div id="ctx-card-product-name" class="ctx-card-product-name" data-i18n="models.card.waiting">等待读取模型…</div>
+          <div class="ctx-card-efforts-row">
+            <span id="ctx-card-efforts-list" class="ctx-card-efforts-list"
+              data-i18n="models.card.effortsEmpty">可用档位：—</span>
+            <span id="ctx-card-session-effort" class="ctx-card-session-effort" hidden>当前会话：—</span>
+          </div>
+        </div>
+
+        <div class="ctx-cap-ref-card" id="ctx-capability-ref">
+          <div class="ctx-cap-ref-grid">
+            <div class="ctx-cap-item">
+              <span class="ctx-cap-lbl" data-i18n="models.cap.window">模型总窗口</span>
+              <span class="ctx-cap-val" id="ctx-cap-window">—</span>
+            </div>
+            <div class="ctx-cap-item">
+              <span class="ctx-cap-lbl" data-i18n="models.cap.output">最大输出</span>
+              <span class="ctx-cap-val" id="ctx-cap-output">—</span>
+            </div>
+            <div class="ctx-cap-item">
+              <span class="ctx-cap-lbl" data-i18n="models.cap.modelMax">理论输入上限</span>
+              <span class="ctx-cap-val" id="ctx-cap-model-max">—</span>
+            </div>
+            <div class="ctx-cap-item">
+              <span class="ctx-cap-lbl" data-i18n="models.cap.stockDefault">默认预算</span>
+              <span class="ctx-cap-val" id="ctx-cap-default">—</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="ctx-card-metrics ctx-card-metrics-spaced">
+          <div class="ctx-metric-row ctx-metric-observed">
+            <span class="ctx-metric-label" data-i18n="models.card.observedBudget">实测预算</span>
+            <div class="ctx-metric-value-col">
+              <span class="ctx-metric-value" id="ctx-card-observed-budget"
+                data-i18n="models.card.observedBudgetNone">尚未观测</span>
+              <span class="ctx-metric-service-limit" id="ctx-card-service-limit" hidden></span>
+            </div>
+            <span class="ctx-metric-side" data-i18n="models.card.observedBudgetSide">对话中实际分配</span>
+          </div>
+          <div class="ctx-metric-row ctx-metric-observed">
+            <span class="ctx-metric-label" data-i18n="models.card.observedSpeed">实测速度</span>
+            <div class="ctx-metric-value-col">
+              <div id="ctx-card-observed-speed" class="ctx-speed-effort-lines"
+                data-i18n="models.card.observedSpeedNone">暂无实测数据</div>
+              <button id="btn-card-goto-speed" class="ctx-inline-link-btn" type="button"
+                data-i18n="models.card.gotoSpeed">查看速度对比 ›</button>
+            </div>
+          </div>
+          <div class="ctx-metric-row ctx-metric-client" id="ctx-card-tier-caps-row" hidden>
+            <span class="ctx-metric-label" data-i18n="models.card.tierCaps">档位能力</span>
+            <div class="ctx-metric-value-col">
+              <div id="ctx-card-tier-caps" class="ctx-speed-effort-lines">—</div>
+            </div>
+          </div>
+        </div>
+        <div id="ctx-card-hints" class="ctx-card-hints" hidden></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================= -->
+  <!-- 专属浮层 3 (对应 #badge-speed): 生成速度与跨模型对比 (460px) -->
+  <!-- ========================================================= -->
+  <div id="pane-ctx-speed" class="wb-tab-pane ctx-tab-pane" role="region" aria-label="生成速度与对比" hidden>
+    <!-- 顶部卡片：当前最新响应流式速度、首字延迟与耗时拆解 -->
+    <div id="speed-summary" class="unified-call-speed-card speed-summary-card">
+      <div class="key-header">
+        <span class="key-title speed-kpi-accent" data-i18n="session.speedSummary.titleNoBolt">最新响应速度</span>
+        <div class="speed-badge-group">
+          <span id="speed-badge" class="key-pill pill-muted" data-i18n="session.speed.pending">待生成</span>
+          <button id="btn-speed-breakdown-toggle" class="latest-call-link-btn" type="button" aria-expanded="false"
+            hidden data-i18n="session.speed.details">拆解</button>
+        </div>
+      </div>
+      <div class="key-stats speed-kpi-grid">
+        <div class="key-stat">
+          <div class="key-stat-label" id="speed-val-label" data-i18n="session.speed.streamRate">纯流式速度</div>
+          <div id="speed-val" class="key-stat-val speed-kpi-accent">—</div>
+        </div>
+        <div class="key-stat">
+          <div class="key-stat-label" data-i18n="session.speed.ttft">首字延迟</div>
+          <div id="speed-ttft" class="key-stat-val">—</div>
+        </div>
+        <div class="key-stat">
+          <div class="key-stat-label" data-i18n="session.speed.duration">生成耗时</div>
+          <div id="speed-duration" class="key-stat-val">—</div>
+        </div>
+        <div class="key-stat">
+          <div class="key-stat-label" data-i18n="session.speed.tokens">本次输出</div>
+          <div id="speed-tokens" class="key-stat-val">—</div>
+        </div>
+      </div>
+      <div id="speed-sub-label" class="speed-sub-label" hidden></div>
+      <div id="speed-takeaway" class="key-takeaway" data-i18n="session.speed.wait">等待首次模型输出产生速度统计…</div>
+      <div id="speed-breakdown-details" class="speed-breakdown-details" style="display:none;">
+        <div class="call-detail-grid" id="speed-breakdown-grid"></div>
+      </div>
+    </div>
+
+    <!-- 下方区域：各模型与档位历史速度对比 -->
+    <div class="ctx-speed-toolbar">
+      <div class="ctx-segmented" role="group" aria-label="时间范围" data-i18n-aria="speed.range.aria">
+        <button id="speed-range-7d" class="ctx-seg-btn active" type="button" data-speed-range="7"
+          data-i18n="speed.range.7d">近 7 天</button>
+        <button id="speed-range-30d" class="ctx-seg-btn" type="button" data-speed-range="30"
+          data-i18n="speed.range.30d">近 30 天</button>
+        <button id="speed-range-all" class="ctx-seg-btn" type="button" data-speed-range="all"
+          data-i18n="speed.range.all">全部</button>
+      </div>
+      <div id="speed-origin-filter-wrap" class="ctx-segmented" role="group" aria-label="样本来源"
+        data-i18n-aria="speed.origin.aria">
+        <button id="speed-origin-all" class="ctx-seg-btn active" type="button" data-speed-origin="all"
+          data-i18n="speed.origin.all">全部来源</button>
+        <button id="speed-origin-chat" class="ctx-seg-btn" type="button" data-speed-origin="chat"
+          data-i18n="speed.origin.chat">日常对话</button>
+      </div>
+    </div>
+
+    <div class="ctx-chart-card" id="speed-unified-chart-card">
+      <div class="ctx-chart-header">
+        <div class="ctx-segmented" role="tablist" aria-label="对比指标" data-i18n-aria="speed.metric.aria">
+          <button id="speed-view-mode-bar" class="ctx-seg-btn active" type="button" role="tab" aria-selected="true"
+            data-speed-view="bar" data-i18n="speed.viewMode.bar">模型对比</button>
+          <button id="speed-view-mode-line" class="ctx-seg-btn" type="button" role="tab" aria-selected="false"
+            data-speed-view="line" data-i18n="speed.viewMode.line">单模型趋势</button>
+        </div>
+      </div>
+
+      <div id="speed-chart-pane-bar" class="speed-chart-subpane">
+        <div class="ctx-chart-header ctx-chart-subheader">
+          <span id="speed-bar-title" class="ctx-chart-title ctx-chart-subtitle"
+            data-i18n="speed.barTitle.tps">输出速度对比</span>
+          <div class="ctx-segmented" role="group" aria-label="对比指标" data-i18n-aria="speed.metric.aria">
+            <button id="speed-metric-tps" class="ctx-seg-btn active" type="button" data-speed-metric="tps"
+              data-i18n="speed.metric.tps">输出速度</button>
+            <button id="speed-metric-ttft" class="ctx-seg-btn" type="button" data-speed-metric="ttft"
+              data-i18n="speed.metric.ttft">首字延迟</button>
+            <button id="speed-metric-duration" class="ctx-seg-btn" type="button" data-speed-metric="duration"
+              data-i18n="speed.metric.duration">总耗时</button>
+          </div>
+        </div>
+        <div id="speed-bar-empty" class="ctx-speed-empty" hidden data-i18n="speed.empty">还没有可用的速度记录。正常对话后会自动积累。</div>
+        <div id="speed-bar-chart-wrap" class="ctx-svg-wrap">
+          <svg id="speed-bar-svg" class="ctx-speed-svg" role="img" aria-label="各模型与档位速度对比柱状图"
+            data-i18n-aria="speed.barSvg.aria"></svg>
+          <div id="speed-bar-tooltip" class="ctx-chart-tooltip" hidden></div>
+        </div>
+        <div id="speed-bar-note" class="ctx-chart-note" data-i18n="speed.barNote">按中位数统计 · 不足 3 条标为样本少</div>
+      </div>
+
+      <div id="speed-chart-pane-line" class="speed-chart-subpane" hidden>
+        <div class="ctx-chart-header ctx-chart-subheader ctx-line-header">
+          <span class="ctx-chart-title ctx-chart-subtitle" data-i18n="speed.lineTitle">单模型速度趋势</span>
+          <div id="speed-model-dropdown-wrap" class="ag-dropdown-wrapper ctx-speed-dropdown">
+            <div id="speed-model-dropdown-trigger" class="ag-dropdown-trigger ctx-compact-trigger" tabindex="0"
+              title="选择一个模型与档位查看速度变化" data-i18n-title="speed.linePickTitle">
+              <span id="speed-model-dropdown-label" class="ag-dropdown-label"
+                data-i18n="speed.lineNoModel">暂无模型记录</span>
+              <div class="ag-dropdown-arrow">
+                <svg viewBox="0 0 10 6" width="10" height="6" fill="none" stroke="currentColor" stroke-width="1.5"
+                  stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M1 1l4 4 4-4" />
+                </svg>
+              </div>
+            </div>
+            <div id="speed-model-dropdown-menu" class="ag-dropdown-menu"></div>
+          </div>
+        </div>
+        <div id="speed-line-empty" class="ctx-speed-empty" data-i18n="speed.empty">还没有可用的速度记录。正常对话后会自动积累。</div>
+        <div id="speed-line-chart-wrap" class="ctx-svg-wrap" hidden>
+          <svg id="speed-line-svg" class="ctx-speed-svg" role="img" aria-label="所选模型与档位历史输出速度折线图"
+            data-i18n-aria="speed.lineSvg.aria"></svg>
+          <div id="speed-line-tooltip" class="ctx-chart-tooltip" hidden></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================= -->
+  <!-- 专属浮层 4 (对应 #badge-tokens): 累计 Token 用量 (700px)   -->
+  <!-- ========================================================= -->
+  <div id="panel-tokens" class="wb-tab-pane" role="region" aria-label="累计 Token 用量" hidden>
+    <div id="view-tokens">
+      <div class="tokens-unified-toolbar">
+        <div class="source-switch-bar">
+          <button id="src-tab-all" class="switch-pill-btn active" type="button" data-i18n="tokens.src.all">全部</button>
+          <button id="src-tab-desktop" class="switch-pill-btn" type="button"
+            data-i18n="tokens.src.desktop">桌面端</button>
+          <button id="src-tab-cli" class="switch-pill-btn" type="button" data-i18n="tokens.src.cli">CLI</button>
+        </div>
+
+        <div class="source-switch-bar">
+          <button id="tok-view-tokens" class="switch-pill-btn active" type="button"
+            data-i18n="tokens.view.tokens">Token 统计</button>
+          <button id="tok-view-models" class="switch-pill-btn" type="button"
+            data-i18n="tokens.view.models">按模型</button>
+          <button id="tok-view-cost" class="switch-pill-btn" type="button"
+            data-i18n="tokens.view.cost">API 参考金额</button>
+        </div>
+      </div>
+
+      <div id="tokens-main-view">
+        <div class="token-stat-cards" id="token-stat-cards">
+          <div class="t-card">
+            <div class="t-card-lbl">
+              <span data-i18n="tokens.card.total">累计用量</span>
+              <span class="t-card-tag" data-i18n="tokens.card.includeCache">含缓存</span>
+            </div>
+            <div class="t-card-val" id="t-total-val">--</div>
+            <div class="t-card-sub" id="t-total-sub" data-i18n="common.loading">读取中...</div>
+            <div class="t-card-cost" id="t-total-cost" data-i18n="tokens.card.costPlaceholder">≈ $0.00 · 日均 $0.00</div>
+          </div>
+          <div class="t-card">
+            <div class="t-card-lbl"><span data-i18n="tokens.card.today">今日使用</span></div>
+            <div class="t-card-val" id="t-today-val">--</div>
+            <div class="t-card-sub" id="t-today-sub" data-i18n="common.loading">读取中...</div>
+            <div class="t-card-cost" id="t-today-cost">≈ $0.00</div>
+          </div>
+          <div class="t-card">
+            <div class="t-card-lbl"><span data-i18n="tokens.card.month">本月使用</span></div>
+            <div class="t-card-val" id="t-month-val">--</div>
+            <div class="t-card-sub" id="t-month-sub" data-i18n="common.loading">读取中...</div>
+            <div class="t-card-cost" id="t-month-cost" data-i18n="tokens.card.costPlaceholder">≈ $0.00 · 日均 $0.00</div>
+          </div>
+          <div class="t-card">
+            <div class="t-card-lbl"><span data-i18n="tokens.card.year">年度使用</span></div>
+            <div class="t-card-val" id="t-year-val">--</div>
+            <div class="t-card-sub" id="t-year-sub" data-i18n="common.loading">读取中...</div>
+            <div class="t-card-cost" id="t-year-cost" data-i18n="tokens.card.costPlaceholder">≈ $0.00 · 日均 $0.00</div>
+          </div>
+        </div>
+
+        <div id="token-cache-breakdown" class="token-cache-breakdown">
+          <div class="tcb-item">
+            <span class="tcb-lbl" data-i18n="tokens.cache.uncachedInput">未缓存输入</span>
+            <strong class="tcb-val" id="tcb-input-val">--</strong>
+          </div>
+          <div class="tcb-item">
+            <span class="tcb-lbl" data-i18n="tokens.cache.cacheRead">缓存读取</span>
+            <strong class="tcb-val" id="tcb-cache-val">--</strong>
+          </div>
+          <div class="tcb-item">
+            <span class="tcb-lbl" data-i18n="tokens.cache.totalInput">总输入</span>
+            <strong class="tcb-val" id="tcb-total-input-val">--</strong>
+          </div>
+          <div class="tcb-item">
+            <span class="tcb-lbl" data-i18n="tokens.cache.output">输出</span>
+            <strong class="tcb-val" id="tcb-output-val">--</strong>
+          </div>
+          <div class="tcb-item tcb-ratio-item">
+            <span class="tcb-lbl" data-i18n="tokens.cache.ratio">缓存占比</span>
+            <strong class="tcb-val tcb-ratio-val" id="tcb-ratio-val">--</strong>
+          </div>
+          <div class="tcb-note" id="tcb-note" hidden></div>
+        </div>
+
+        <div class="heatmap-section">
+          <div class="heat-header">
+            <div class="heat-header-left">
+              <div class="heat-title" data-i18n="tokens.heat.title">Token 活动</div>
+              <div class="heat-win-nav">
+                <button id="h-page-prev" class="heat-nav-btn" type="button" title="查看更早的 12 个月窗口"
+                  data-i18n-title="tokens.heat.prevTitle" disabled>‹</button>
+                <span id="h-win-range">--</span>
+                <button id="h-page-next" class="heat-nav-btn" type="button" title="查看更新的 12 个月窗口"
+                  data-i18n-title="tokens.heat.nextTitle" disabled>›</button>
+              </div>
+            </div>
+            <div class="heat-tabs" id="heat-tabs-bar" role="tablist" aria-label="热力图统计周期"
+              data-i18n-aria="tokens.heat.tabsAria">
+              <div class="heat-tab-thumb" id="heat-tab-thumb" aria-hidden="true"></div>
+              <button class="heat-tab-btn active" id="h-tab-daily" role="tab" aria-selected="true" type="button"
+                tabindex="0" data-i18n="tokens.heat.daily">每天</button>
+              <button class="heat-tab-btn" id="h-tab-weekly" role="tab" aria-selected="false" type="button" tabindex="-1"
+                data-i18n="tokens.heat.weekly">每周</button>
+              <button class="heat-tab-btn" id="h-tab-monthly" role="tab" aria-selected="false" type="button"
+                tabindex="-1" data-i18n="tokens.heat.monthly">每月</button>
+              <button class="heat-tab-btn" id="h-tab-yearly" role="tab" aria-selected="false" type="button"
+                tabindex="-1" data-i18n="tokens.heat.yearly">今年</button>
+              <button class="heat-tab-btn" id="h-tab-cum" role="tab" aria-selected="false" type="button" tabindex="-1"
+                data-i18n="tokens.heat.cum">累计总量</button>
+            </div>
+          </div>
+          <div class="heat-scroll-box" id="h-scroll-box">
+            <div id="h-daily-box">
+              <div class="heat-grid-cols" id="h-grid-cols"></div>
+              <div class="heat-months" id="h-months"></div>
+            </div>
+            <div id="h-weekly-box" style="display:none"></div>
+            <div id="h-monthly-box" style="display:none"></div>
+            <div id="h-yearly-box" style="display:none"></div>
+            <div id="h-cum-box" style="display:none">
+              <canvas id="h-cum-canvas"></canvas>
+            </div>
+          </div>
+          <div id="h-summary-bar" class="heat-summary-bar">
+            <div class="heat-sum-item">
+              <span class="heat-sum-label" data-i18n="tokens.heat.sumTokens">区间合计:</span>
+              <span id="h-sum-tokens" class="heat-sum-val">-- Tokens</span>
+            </div>
+            <div class="heat-sum-item">
+              <span class="heat-sum-label" data-i18n="tokens.heat.sumCost">预估费用:</span>
+              <span id="h-sum-cost" class="heat-sum-val">≈ $0.00</span>
+            </div>
+            <div class="heat-sum-item">
+              <span class="heat-sum-label" data-i18n="tokens.heat.sumDailyAvg">折合每天:</span>
+              <span id="h-sum-daily-avg" class="heat-sum-val">$0.00</span>
+            </div>
+            <div class="heat-sum-item">
+              <span class="heat-sum-label" data-i18n="tokens.heat.sumActiveAvg">活跃日均:</span>
+              <span id="h-sum-active-avg" class="heat-sum-val" data-i18n="tokens.heat.activeAvgPlaceholder">$0.00
+                (0天)</span>
+            </div>
+            <div id="h-sum-sub-ratio-wrap" class="heat-sum-item heat-sum-clickable" style="display:none" role="button"
+              tabindex="0" title="点击跳转至 API 参考金额调整月度实付">
+              <span class="heat-sum-label" data-i18n="tokens.heat.sumSubRatio">订阅性价比:</span>
+              <span id="h-sum-sub-ratio" class="heat-sum-val heat-sum-accent">--</span>
+            </div>
+          </div>
+          <div class="heat-footer-row">
+            <span id="first-use-badge" class="first-use-badge heat-footer-note"
+              data-i18n="tokens.heat.firstUsePlaceholder">首次使用：--</span>
+            <div id="heat-legend-scale" class="heat-legend-scale">
+              <span data-i18n="tokens.heat.less">少</span>
+              <span id="heat-leg-0" class="heat-leg-swatch"></span>
+              <span id="heat-leg-1" class="heat-leg-swatch"></span>
+              <span id="heat-leg-2" class="heat-leg-swatch"></span>
+              <span id="heat-leg-3" class="heat-leg-swatch"></span>
+              <span id="heat-leg-4" class="heat-leg-swatch"></span>
+              <span data-i18n="tokens.heat.more">多</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="model-usage-view" class="model-usage-card" style="display:none">
+        <div class="model-usage-header">
+          <div>
+            <div class="model-usage-title" data-i18n="modelsUsage.title">按模型 Token 用量</div>
+            <div id="model-usage-subtitle" class="model-usage-subtitle" data-i18n="modelsUsage.subtitle">查看桌面端与 CLI 各模型每日 Token 消耗及占比分布。</div>
+          </div>
+        </div>
+
+        <div class="model-usage-controls">
+          <div class="source-switch-bar">
+            <button id="model-period-7d" class="switch-pill-btn active" type="button">7d</button>
+            <button id="model-period-30d" class="switch-pill-btn" type="button">30d</button>
+          </div>
+          <div class="model-usage-right-ctrls">
+            <div class="source-switch-bar">
+              <button id="model-group-model" class="switch-pill-btn active" type="button"
+                data-i18n="modelsUsage.groupModel">按模型</button>
+              <button id="model-group-variant" class="switch-pill-btn" type="button"
+                data-i18n="modelsUsage.groupVariant">按档位</button>
+            </div>
+            <div class="source-switch-bar">
+              <button id="model-metric-total" class="switch-pill-btn active" type="button"
+                data-i18n="modelsUsage.metricTotal">含缓存</button>
+              <button id="model-metric-nocache" class="switch-pill-btn" type="button"
+                data-i18n="modelsUsage.metricNoCache">不含缓存</button>
+            </div>
+            <button id="model-toggle-unattr" class="switch-pill-btn model-unattr-btn" type="button" style="display:none"
+              data-i18n="modelsUsage.hideUnattr">隐藏未标明</button>
+          </div>
+        </div>
+
+        <div class="model-usage-nav-row">
+          <div class="model-usage-range-wrap">
+            <span id="model-usage-range-label" class="model-usage-range-lbl">--</span>
+            <span id="model-usage-window-total" class="key-pill pill-muted model-win-pill">--</span>
+          </div>
+          <div class="model-usage-nav-btns">
+            <button id="btn-model-win-prev" class="heat-nav-btn" type="button" title="查看更早区间"
+              data-i18n-title="modelsUsage.prevTitle">‹</button>
+            <button id="btn-model-win-next" class="heat-nav-btn" type="button" title="查看更新区间"
+              data-i18n-title="modelsUsage.nextTitle" disabled>›</button>
+          </div>
+        </div>
+
+        <div id="model-usage-chart-wrap" class="model-usage-chart-wrap">
+          <div class="model-usage-gridlines" aria-hidden="true">
+            <div class="model-usage-gridline"><span id="model-chart-max-lbl" class="model-chart-max-lbl"></span></div>
+            <div class="model-usage-gridline"></div>
+            <div class="model-usage-gridline"></div>
+            <div class="model-usage-gridline"></div>
+          </div>
+          <div id="model-usage-bars" class="model-usage-bars"></div>
+          <div id="model-usage-xaxis" class="model-usage-xaxis"></div>
+        </div>
+
+        <div id="model-usage-empty" class="model-usage-empty" style="display:none" data-i18n="modelsUsage.empty">当前时间窗暂无 Token 用量记录</div>
+        <div id="model-usage-legend" class="model-usage-legend"></div>
+      </div>
+
+      <div id="cost-estimate-card" class="cost-full-card" style="display:none">
+        <div class="cost-full-top-bar">
+          <div class="cost-top-title-group">
+            <span id="cost-card-title" class="cost-card-title cost-card-heading" data-i18n="cost.title">本期 API 参考金额</span>
+            <span id="cost-period-tag" class="key-pill pill-muted cost-meta-pill"
+              data-i18n="cost.periodTag">本月自然月</span>
+            <span id="cost-non-paid-badge" class="key-pill pill-muted cost-meta-pill"
+              data-i18n="cost.nonPaidBadge">参考估值</span>
+          </div>
+          <div class="cost-scope-actions">
+            <button id="cost-btn-scope-period" class="switch-pill-btn cost-compact-pill active" type="button"
+              data-i18n="cost.scopePeriod">本期</button>
+            <button id="cost-btn-scope-all" class="switch-pill-btn cost-compact-pill" type="button"
+              data-i18n="cost.scopeAll">全量历史</button>
+            <span id="cost-coverage-pill" class="key-pill pill-muted cost-meta-pill">100%</span>
+          </div>
+        </div>
+
+        <div class="cost-hero-grid">
+          <div>
+            <div id="cost-grand-val" class="cost-grand-val">$0.00</div>
+            <div id="cost-scope-desc" class="cost-scope-desc">—</div>
+          </div>
+          <div id="cost-grand-sub" class="cost-grand-sub">—</div>
+        </div>
+
+        <div id="cost-details-pane">
+          <div class="cost-mode-row">
+            <span class="cost-mode-lbl" data-i18n="cost.modeLabel">估值模式:</span>
+            <div class="source-switch-bar">
+              <button id="cost-btn-mode-ref" class="switch-pill-btn cost-compact-pill active" type="button"
+                data-i18n="cost.modeRef">参考模型估算</button>
+              <button id="cost-btn-mode-hybrid" class="switch-pill-btn cost-compact-pill" type="button"
+                data-i18n="cost.modeHybrid">混合模式</button>
+              <button id="cost-btn-mode-identified" class="switch-pill-btn cost-compact-pill" type="button"
+                data-i18n="cost.modeIdentified">仅已识别模型</button>
+            </div>
+          </div>
+
+          <div class="cost-summary-strip">
+            <span id="cost-usage-summary" class="cost-usage-summary cost-usage-summary-txt">—</span>
+            <span id="cost-diff-summary" class="cost-diff-summary cost-diff-summary-txt">—</span>
+          </div>
+
+          <div id="ref-cost-breakdown-cards" class="ref-cost-grid">
+            <div class="t-card ref-cost-card ref-cost-subcard">
+              <div class="ref-cost-lbl"><span data-i18n="cost.card.input">输入 Token</span> ($0.75/M)</div>
+              <div id="ref-cost-input-val" class="ref-cost-val">$0.00</div>
+              <div id="ref-cost-input-tok" class="ref-cost-tok">0 tok</div>
+            </div>
+            <div class="t-card ref-cost-card ref-cost-subcard">
+              <div class="ref-cost-lbl"><span data-i18n="cost.card.cache">缓存读取 (优惠)</span> ($0.075/M)</div>
+              <div id="ref-cost-cache-val" class="ref-cost-val">$0.00</div>
+              <div id="ref-cost-cache-tok" class="ref-cost-tok">0 tok</div>
+            </div>
+            <div class="t-card ref-cost-card ref-cost-subcard">
+              <div class="ref-cost-lbl"><span data-i18n="cost.card.output">输出 Token</span> ($3.75/M)</div>
+              <div id="ref-cost-output-val" class="ref-cost-val">$0.00</div>
+              <div id="ref-cost-output-tok" class="ref-cost-tok">0 tok</div>
+            </div>
+          </div>
+
+          <div id="plan-detail-card" class="cost-roi-card">
+            <div class="cost-roi-header">
+              <div class="cost-roi-title-group cost-roi-title-row">
+                <span class="cost-roi-title" data-i18n="cost.roiCard.title">月度订阅实付对比 (USD)</span>
+                <span id="plan-summary-price-val" class="cost-roi-price-pill">$19.99/月</span>
+                <span id="p-det-price" class="sr-only">$19.99/月</span>
+                <span id="p-det-price-tag" class="key-pill pill-muted cost-meta-pill"
+                  data-i18n="plan.tag.publicRef">公开参考价</span>
+                <span id="plan-save-feedback" class="plan-save-feedback" style="display:none"></span>
+              </div>
+              <div id="cost-sub-line-wrap" class="cost-sub-line-wrap">
+                <span id="cost-sub-line" data-i18n="cost.subUnknown">订阅实付：未填写</span>
+                <span id="cost-sub-spend-val" style="display:none">—</span>
+                <span id="cost-sub-compare-note" style="display:none"></span>
+                <span id="cost-sub-spend-lbl" style="display:none"></span>
+              </div>
+            </div>
+            <div class="minimal-spend-controls cost-spend-controls">
+              <div class="minimal-spend-input-wrap">
+                <span class="minimal-spend-prefix">$</span>
+                <input id="input-monthly-spend-usd" type="number" min="0" step="0.01" placeholder="19.99（免费填 0）"
+                  data-i18n-placeholder="plan.spend.placeholder" />
+              </div>
+              <button id="btn-monthly-spend-free" class="switch-pill-btn" type="button"
+                data-i18n="plan.spend.btnFree">设为 $0</button>
+              <button id="btn-monthly-spend-save" class="switch-pill-btn active" type="button"
+                data-i18n="plan.form.save">保存</button>
+              <button id="btn-monthly-spend-clear" class="switch-pill-btn btn-spend-clear cost-clear-btn" type="button"
+                data-i18n="plan.form.clear">清除</button>
+            </div>
+          </div>
+
+          <div id="cost-breakdown-info" class="cost-breakdown-info" data-i18n="cost.analyzing">
+            正在分析请求模型与计价覆盖率…
+          </div>
+
+          <div class="cost-disclaimer-note" data-i18n="cost.disclaimer">
+            按公开 API 单价折算（缓存 10%），仅作参考。
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================= -->
+  <!-- 共享设置视图 (设置: 语言 / 主题与精选色板 / 顶栏指标)            -->
+  <!-- ========================================================= -->
+  <div id="pane-ctx-settings" class="wb-tab-pane ctx-tab-pane" role="region" aria-label="面板与顶栏设置" hidden>
+    <div class="ctx-settings-card" id="appearance-presets-card">
+      <div class="ctx-settings-card-hdr">
+        <div class="ctx-settings-card-title" data-i18n="settings.appearance.title">语言、主题与精选配色</div>
+        <button id="btn-reset-appearance" class="color-reset-btn" type="button"
+          data-i18n="settings.appearance.reset">恢复默认外观</button>
+      </div>
+
+      <div class="appearance-row">
+        <span class="appearance-row-lbl" data-i18n="settings.panelLang.label">界面语言</span>
+        <div id="panel-lang-top-segmented" class="ctx-segmented" role="group" aria-label="插件面板语言"
+          data-i18n-aria="settings.panelLang.aria">
+          <button id="btn-top-lang-zh-CN" class="ctx-seg-btn" type="button" data-panel-lang="zh-CN" title="简体中文"
+            aria-label="简体中文">简</button>
+          <button id="btn-top-lang-zh-TW" class="ctx-seg-btn" type="button" data-panel-lang="zh-TW" title="繁體中文"
+            aria-label="繁體中文">繁</button>
+          <button id="btn-top-lang-en" class="ctx-seg-btn active" type="button" data-panel-lang="en" title="English"
+            aria-label="English">EN</button>
+        </div>
+      </div>
+
+      <div class="appearance-row">
+        <span class="appearance-row-lbl" data-i18n="settings.themeMode.label">主题模式</span>
+        <div id="theme-mode-segmented" class="ctx-segmented" role="group" aria-label="主题模式"
+          data-i18n-aria="settings.themeMode.label">
+          <button id="btn-theme-mode-auto" class="ctx-seg-btn active" type="button" data-theme-mode="auto"
+            data-i18n="settings.themeMode.auto">跟随宿主</button>
+          <button id="btn-theme-mode-dark" class="ctx-seg-btn" type="button" data-theme-mode="dark"
+            data-i18n="settings.themeMode.dark">深色</button>
+          <button id="btn-theme-mode-light" class="ctx-seg-btn" type="button" data-theme-mode="light"
+            data-i18n="settings.themeMode.light">浅色</button>
+        </div>
+      </div>
+
+      <div class="appearance-palette-block">
+        <div class="appearance-row-lbl appearance-palette-lbl" data-i18n="settings.palette.label">主题配色</div>
+        <div class="heat-preset-group palette-grid-5" id="heat-preset-group">
+          <button id="preset-btn-violet" class="heat-preset-btn" type="button" data-heat-preset="violet" data-active="true">
+            <span class="heat-preset-dots"><i style="background:#27272a"></i><i style="background:#3f1e6b"></i><i
+                style="background:#652ab7"></i><i style="background:#9053f8"></i><i style="background:#c084fc"></i></span>
+            <span data-i18n="settings.palette.violet">紫罗兰</span>
+          </button>
+          <button id="preset-btn-emerald" class="heat-preset-btn" type="button" data-heat-preset="emerald" data-active="false">
+            <span class="heat-preset-dots"><i style="background:#27272a"></i><i style="background:#14532d"></i><i
+                style="background:#15803d"></i><i style="background:#22c55e"></i><i style="background:#86efac"></i></span>
+            <span data-i18n="settings.palette.emerald">经典绿</span>
+          </button>
+          <button id="preset-btn-ocean" class="heat-preset-btn" type="button" data-heat-preset="ocean" data-active="false">
+            <span class="heat-preset-dots"><i style="background:#27272a"></i><i style="background:#1e3a8a"></i><i
+                style="background:#1d4ed8"></i><i style="background:#3b82f6"></i><i style="background:#93c5fd"></i></span>
+            <span data-i18n="settings.palette.ocean">深海蓝</span>
+          </button>
+          <button id="preset-btn-amber" class="heat-preset-btn" type="button" data-heat-preset="amber" data-active="false">
+            <span class="heat-preset-dots"><i style="background:#27272a"></i><i style="background:#78350f"></i><i
+                style="background:#b45309"></i><i style="background:#f59e0b"></i><i style="background:#fde68a"></i></span>
+            <span data-i18n="settings.palette.amber">琥珀金</span>
+          </button>
+          <button id="preset-btn-graphite" class="heat-preset-btn" type="button" data-heat-preset="graphite" data-active="false">
+            <span class="heat-preset-dots"><i style="background:#232326"></i><i style="background:#3f3f46"></i><i
+                style="background:#52525b"></i><i style="background:#a1a1aa"></i><i style="background:#e4e4e7"></i></span>
+            <span data-i18n="settings.palette.graphite">石墨灰</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="ctx-settings-card" id="topbar-pills-card">
+      <div class="ctx-settings-card-hdr">
+        <div class="ctx-settings-card-title" data-i18n="settings.pills.title">顶栏常驻指标</div>
+      </div>
+      <div class="pill-toggles-grid" id="topbar-pills-grid">
+        <label class="pill-toggle-item">
+          <input id="chk-pill-quota" type="checkbox" checked />
+          <svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+            <circle cx="8" cy="8" r="5.5" stroke-opacity="0.28"></circle>
+            <path d="M8 2.5A5.5 5.5 0 1 1 2.8 9.8" stroke-linecap="round"></path>
+          </svg>
+          <span class="pill-toggle-name" data-i18n="settings.pills.quota">模型额度</span>
+        </label>
+        <label class="pill-toggle-item">
+          <input id="chk-pill-context" type="checkbox" checked />
+          <svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+            <circle cx="8" cy="8" r="5.5" stroke-opacity="0.28"></circle>
+            <path d="M8 2.5A5.5 5.5 0 0 1 13.5 8" stroke-linecap="round"></path>
+          </svg>
+          <span class="pill-toggle-name" data-i18n="settings.pills.context">上下文占比</span>
+        </label>
+        <label class="pill-toggle-item">
+          <input id="chk-pill-speed" type="checkbox" checked />
+          <svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.6"
+            stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M9.2 1.8L3.6 9h4.1l-.9 5.2L12.4 7H8.3l.9-5.2z"></path>
+          </svg>
+          <span class="pill-toggle-name" data-i18n="settings.pills.speed">输出速度</span>
+        </label>
+        <label class="pill-toggle-item">
+          <input id="chk-pill-tokens" type="checkbox" checked />
+          <svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true">
+            <path d="M3 13V9M8 13V4M13 13V7"></path>
+          </svg>
+          <span class="pill-toggle-name" data-i18n="settings.pills.tokens">累计用量</span>
+        </label>
+        <label class="pill-toggle-item">
+          <input id="chk-pill-cli" type="checkbox" checked />
+          <span class="cli-icon" aria-hidden="true">&gt;_</span>
+          <span class="pill-toggle-name" data-i18n="settings.pills.cli">CLI 终端</span>
+        </label>
+      </div>
+    </div>
+  </div>
+
+  <!-- 全局统一居中重启确认模态弹窗 -->
+  <div id="global-restart-modal" class="ag-modal-overlay" hidden role="dialog" aria-modal="true"
+    aria-labelledby="modal-restart-title">
+    <div class="ag-modal-card">
+      <div id="modal-restart-title" class="ag-modal-title" data-i18n="models.restartConfirm.title">重启 Antigravity 客户端</div>
+      <div id="modal-restart-text" class="ag-modal-body" data-i18n="models.restartConfirm.text">重启会中断正在运行的任务。请先保存未保存的内容。</div>
+      <div id="modal-restart-feedback" class="ag-modal-feedback" hidden></div>
+      <div class="ag-modal-actions">
+        <button id="btn-modal-restart-cancel" class="unlock-btn unlock-btn-secondary" type="button"
+          data-i18n="models.restartConfirm.cancel">取消</button>
+        <button id="btn-modal-restart-confirm" class="unlock-btn unlock-btn-primary" type="button"
+          data-i18n="models.restartConfirm.go">确认重启</button>
+      </div>
+    </div>
+  </div>
+</section>

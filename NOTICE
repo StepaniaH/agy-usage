@@ -1,0 +1,15 @@
+agy-usage
+
+This project is derived from:
+  elviscjn-cjn/antigravity-context-viewer
+  https://github.com/elviscjn-cjn/antigravity-context-viewer
+
+Original work copyright (c) 2026 Antigravity Context Viewer Contributors,
+licensed under the MIT License (see LICENSE).
+
+Summary of modifications:
+- Scoped to macOS and Linux; removed Windows scripts, precompiled helpers, and WSL scanning.
+- Removed binary patching, OAuth token extraction, direct Google API calls,
+  local proxy injection, host DOM localization, request mutation, and remote update checks.
+- Modularized the renderer into domain views with four dedicated topbar popovers,
+  isolated Desktop/CLI accounting, and local-only operation.
