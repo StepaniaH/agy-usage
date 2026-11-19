@@ -839,20 +839,12 @@
 
     .quota-plan-credits-card{
       background:var(--ag-surface-1);border:0;
-      border-radius:12px;padding:11px 13px;margin-bottom:12px;display:flex;flex-direction:column;gap:9px;
+      border-radius:10px;padding:9px 13px;margin-bottom:10px;display:flex;flex-direction:column;
     }
-    .quota-plan-top-row{display:flex;align-items:center;justify-content:space-between;gap:8px}
-    .quota-plan-identity{display:flex;align-items:baseline;gap:8px;min-width:0;flex-wrap:wrap}
-    .quota-plan-name{font-size:12px;font-weight:600;color:var(--ag-text-primary)}
-    .quota-plan-email{font-size:11px;color:var(--ag-text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-    .quota-credits-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-    .quota-credit-item{
-      background:var(--ag-surface-tile);box-shadow:var(--ag-tile-shadow);border:0;border-radius:8px;padding:7px 10px;
-      display:flex;align-items:center;justify-content:space-between;gap:8px;
-      white-space:nowrap;font-size:11px;font-variant-numeric:tabular-nums;
-    }
-    .quota-credit-lbl{color:var(--ag-text-muted);font-size:11px;white-space:nowrap}
-    .quota-credit-val{font-weight:600;color:var(--ag-text-primary);font-size:11px;font-variant-numeric:tabular-nums}
+    .quota-plan-top-row{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%}
+    .quota-plan-identity{display:flex;align-items:center;justify-content:space-between;gap:10px;min-width:0;width:100%}
+    .quota-plan-name{font-size:12px;font-weight:600;color:var(--ag-text-primary);white-space:nowrap;flex-shrink:0}
+    .quota-plan-email{font-size:11px;color:var(--ag-text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
 
     .quota-current-card{
       background:var(--ag-surface-1);border:0;
@@ -1903,24 +1895,13 @@
           data-i18n="quota.restartBtn">重启客户端</button>
       </div>
 
-      <!-- 套餐等级与 Prompt / Flow Credits 概览 -->
+      <!-- 订阅等级与当前账号概览 -->
       <div id="quota-plan-credits-card" class="quota-plan-credits-card">
         <div class="quota-plan-top-row">
           <div class="quota-plan-identity">
             <span class="quota-plan-name" id="p-det-name">Google AI Pro</span>
             <span class="quota-plan-email" id="p-det-account">—</span>
             <span id="plan-summary-text" class="sr-only"></span>
-            <span id="p-det-credits" class="sr-only" hidden>—</span>
-          </div>
-        </div>
-        <div class="quota-credits-grid">
-          <div class="quota-credit-item">
-            <span class="quota-credit-lbl" data-i18n="plan.dt.promptCredits">Prompt 池</span>
-            <span class="quota-credit-val" id="p-det-prompt-credits">—</span>
-          </div>
-          <div class="quota-credit-item">
-            <span class="quota-credit-lbl" data-i18n="plan.dt.flowCredits">Flow 池</span>
-            <span class="quota-credit-val" id="p-det-flow-credits">—</span>
           </div>
         </div>
       </div>
@@ -3206,14 +3187,11 @@ const PANEL_I18N = {
   'plan.summary.custom': { 'zh-CN': '自定义生效', 'zh-TW': '自訂生效', en: 'Custom' },
   'plan.summary.unknown': { 'zh-CN': '未识别/默认', 'zh-TW': '未識別/預設', en: 'Default / Unknown' },
   'plan.summary.perMonth': { 'zh-CN': '/月', 'zh-TW': '/月', en: '/mo' },
-  'plan.dt.promptCredits': { 'zh-CN': 'Prompt 池', 'zh-TW': 'Prompt 池', en: 'Prompt' },
-  'plan.dt.flowCredits': { 'zh-CN': 'Flow 池', 'zh-TW': 'Flow 池', en: 'Flow' },
   'plan.account.unknown': { 'zh-CN': '未识别当前登录邮箱', 'zh-TW': '未識別目前登入信箱', en: 'Signed-in email not detected' },
   'plan.tag.manualFree': { 'zh-CN': '免费', 'zh-TW': '免費', en: 'Free' },
   'plan.tag.userPaid': { 'zh-CN': '实付', 'zh-TW': '實付', en: 'Paid' },
   'plan.tag.publicRef': { 'zh-CN': '公开参考价', 'zh-TW': '公開參考價', en: 'Public ref' },
   'models.restartConfirm.title': { 'zh-CN': '重启 Antigravity 客户端', 'zh-TW': '重新啟動 Antigravity 用戶端', en: 'Restart Antigravity Client' },
-  'plan.credits.avail': { 'zh-CN': '{avail} 可用 / {monthly} 月额度', 'zh-TW': '{avail} 可用 / {monthly} 月額度', en: '{avail} left / {monthly} monthly' },
   'plan.form.clear': { 'zh-CN': '清除', 'zh-TW': '清除', en: 'Clear' },
   'plan.form.save': { 'zh-CN': '保存', 'zh-TW': '儲存', en: 'Save' },
   'cost.title': { 'zh-CN': '本期 API 参考金额', 'zh-TW': '本期 API 參考金額', en: 'Current Period API Value' },
@@ -12459,44 +12437,6 @@ function formatVendorLabel(vendor) {
   // =========================================================================
   // 模型额度看板、套餐详情、共享额度池、动态进度环与定时刷新 (quota-view.js)
   // =========================================================================
-  function formatCreditCountCompact(val) {
-    if (val === null || val === undefined || val === '') return '—';
-    const n = Number(val);
-    if (!Number.isFinite(n)) return String(val);
-    const abs = Math.abs(n);
-    if (abs >= 1e9) {
-      const b = n / 1e9;
-      return `${Number.isInteger(b) ? b : parseFloat(b.toFixed(1))}B`;
-    }
-    if (abs >= 1e6) {
-      const m = n / 1e6;
-      return `${Number.isInteger(m) ? m : parseFloat(m.toFixed(1))}M`;
-    }
-    if (abs >= 10000) {
-      const k = n / 1000;
-      return `${Number.isInteger(k) ? k : parseFloat(k.toFixed(1))}K`;
-    }
-    return String(Math.round(n));
-  }
-
-  function formatCreditCountVerbose(val) {
-    if (val === null || val === undefined || val === '') return '—';
-    const n = Number(val);
-    if (!Number.isFinite(n)) return String(val);
-    return Math.round(n).toLocaleString('en-US');
-  }
-
-  function formatPlanCreditsSummary(credits) {
-    const availShort = formatCreditCountCompact(credits?.available);
-    const monthlyShort = formatCreditCountCompact(credits?.monthly);
-    const availFull = formatCreditCountVerbose(credits?.available);
-    const monthlyFull = formatCreditCountVerbose(credits?.monthly);
-    return {
-      shortText: `${availShort} / ${monthlyShort}`,
-      fullTitle: t('plan.credits.avail', { avail: availFull, monthly: monthlyFull })
-    };
-  }
-
   function renderPlanDetail(ps) {
     if (!ps) return;
     const core = typeof __AGContextMeterCore !== 'undefined' ? __AGContextMeterCore : null;
@@ -12565,24 +12505,6 @@ function formatVendorLabel(vendor) {
       } else if (!ps.hasCustomSettings) {
         spendInput.value = '';
       }
-    }
-
-    const pPrompt = el('p-det-prompt-credits');
-    const pFlow = el('p-det-flow-credits');
-    if (pPrompt && ps.promptCredits) {
-      const promptPair = formatPlanCreditsSummary(ps.promptCredits);
-      pPrompt.textContent = promptPair.shortText;
-      pPrompt.title = promptPair.fullTitle;
-      const pLegacy = el('p-det-credits');
-      if (pLegacy) {
-        pLegacy.textContent = promptPair.shortText;
-        pLegacy.title = promptPair.fullTitle;
-      }
-    }
-    if (pFlow && ps.flowCredits) {
-      const flowPair = formatPlanCreditsSummary(ps.flowCredits);
-      pFlow.textContent = flowPair.shortText;
-      pFlow.title = flowPair.fullTitle;
     }
   }
   const QUOTA_REFRESH_FG_MS = 60000;

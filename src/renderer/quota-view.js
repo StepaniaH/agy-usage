@@ -1,44 +1,6 @@
   // =========================================================================
   // 模型额度看板、套餐详情、共享额度池、动态进度环与定时刷新 (quota-view.js)
   // =========================================================================
-  function formatCreditCountCompact(val) {
-    if (val === null || val === undefined || val === '') return '—';
-    const n = Number(val);
-    if (!Number.isFinite(n)) return String(val);
-    const abs = Math.abs(n);
-    if (abs >= 1e9) {
-      const b = n / 1e9;
-      return `${Number.isInteger(b) ? b : parseFloat(b.toFixed(1))}B`;
-    }
-    if (abs >= 1e6) {
-      const m = n / 1e6;
-      return `${Number.isInteger(m) ? m : parseFloat(m.toFixed(1))}M`;
-    }
-    if (abs >= 10000) {
-      const k = n / 1000;
-      return `${Number.isInteger(k) ? k : parseFloat(k.toFixed(1))}K`;
-    }
-    return String(Math.round(n));
-  }
-
-  function formatCreditCountVerbose(val) {
-    if (val === null || val === undefined || val === '') return '—';
-    const n = Number(val);
-    if (!Number.isFinite(n)) return String(val);
-    return Math.round(n).toLocaleString('en-US');
-  }
-
-  function formatPlanCreditsSummary(credits) {
-    const availShort = formatCreditCountCompact(credits?.available);
-    const monthlyShort = formatCreditCountCompact(credits?.monthly);
-    const availFull = formatCreditCountVerbose(credits?.available);
-    const monthlyFull = formatCreditCountVerbose(credits?.monthly);
-    return {
-      shortText: `${availShort} / ${monthlyShort}`,
-      fullTitle: t('plan.credits.avail', { avail: availFull, monthly: monthlyFull })
-    };
-  }
-
   function renderPlanDetail(ps) {
     if (!ps) return;
     const core = typeof __AGContextMeterCore !== 'undefined' ? __AGContextMeterCore : null;
@@ -107,24 +69,6 @@
       } else if (!ps.hasCustomSettings) {
         spendInput.value = '';
       }
-    }
-
-    const pPrompt = el('p-det-prompt-credits');
-    const pFlow = el('p-det-flow-credits');
-    if (pPrompt && ps.promptCredits) {
-      const promptPair = formatPlanCreditsSummary(ps.promptCredits);
-      pPrompt.textContent = promptPair.shortText;
-      pPrompt.title = promptPair.fullTitle;
-      const pLegacy = el('p-det-credits');
-      if (pLegacy) {
-        pLegacy.textContent = promptPair.shortText;
-        pLegacy.title = promptPair.fullTitle;
-      }
-    }
-    if (pFlow && ps.flowCredits) {
-      const flowPair = formatPlanCreditsSummary(ps.flowCredits);
-      pFlow.textContent = flowPair.shortText;
-      pFlow.title = flowPair.fullTitle;
     }
   }
   const QUOTA_REFRESH_FG_MS = 60000;

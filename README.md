@@ -15,7 +15,7 @@ A lightweight, local topbar overlay for the Antigravity desktop client on macOS 
 Four topbar indicators, each opening a focused popover:
 
 1. **Model Quota**
-   - Topbar progress ring for the active model's remaining quota; popover shows subscription tier, Prompt / Flow credits, shared quota pools, and reset countdowns.
+   - Topbar progress ring for the active model's remaining quota; popover shows subscription tier, shared quota pools, and reset countdowns.
 2. **Context Window**
    - Live window occupancy, budget limit, remaining tokens, and latest-call summary (input, cache read ratio, output, latency) with an expandable turn timeline and local attachment scan.
    - Includes a **Model Limits** tab to inspect per-model context and output limits.

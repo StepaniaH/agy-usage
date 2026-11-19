@@ -627,7 +627,7 @@ test('渲染器与全链路集成：顶栏入口、三时间分列、切换/浏�
   assert.match(h.elements.get('quota-time-updated').textContent, /^Updated \d{2}:\d{2}$/);
   await api.setPanelLanguage('zh-CN', { persist: false });
 
-  // 验证套餐 Prompt / Flow 额度池单行紧凑显示与完整 title 提示（含 #p-det-credits 兼容）
+  // 验证套餐等级与当前账号简洁展示（已移除无实际意义的旧版 Prompt / Flow 占位池）
   api.setTokenHistoryForTest({
     accountScopeKey: 'acct_alice',
     dailyMap: {},
@@ -641,11 +641,8 @@ test('渲染器与全链路集成：顶栏入口、三时间分列、切换/浏�
       flowCredits: { available: 100, monthly: 150000 }
     }
   });
-  assert.equal(h.elements.get('p-det-prompt-credits').textContent, '500 / 50K');
-  assert.equal(h.elements.get('p-det-prompt-credits').title, '500 可用 / 50,000 月额度');
-  assert.equal(h.elements.get('p-det-credits').textContent, '500 / 50K');
-  assert.equal(h.elements.get('p-det-flow-credits').textContent, '100 / 150K');
-  assert.equal(h.elements.get('p-det-flow-credits').title, '100 可用 / 150,000 月额度');
+  assert.equal(h.elements.get('p-det-name').textContent, 'Google AI Pro');
+  assert.equal(h.elements.get('p-det-account').textContent, 'alice.test@example.com');
 
   // 打开面板按需触发 1 次同步，且头部更新时间与刷新按钮同步显现；先完结在途请求后再测连点刷新严格去重
   api.showQuotaPanelForTest(true);

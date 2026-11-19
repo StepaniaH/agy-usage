@@ -311,6 +311,8 @@ test('Safe Edition Invariant 7: 四胶囊一对一纯粹专属浮层、无跨界
   assert.equal(tplHtml.includes('id="tab-wb-quota"'), false, '禁止在专属浮层内放置跨界总 Tab');
   assert.equal(tplHtml.includes('id="tab-wb-tokens"'), false, '禁止在专属浮层内放置跨界总 Tab');
   assert.equal(tplHtml.includes('id="quota-plan-credits-card"'), true);
+  assert.equal(tplHtml.includes('id="p-det-prompt-credits"'), false, '不应展示旧版静态占位 Prompt 池');
+  assert.equal(tplHtml.includes('id="p-det-flow-credits"'), false, '不应展示旧版静态占位 Flow 池');
   assert.equal(tplHtml.includes('id="btn-cost-details-toggle"'), false);
 
   const vm = require('node:vm');
