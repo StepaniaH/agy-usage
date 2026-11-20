@@ -1526,6 +1526,9 @@
 
     return {
       costUSD: Number(totalCost.toFixed(6)),
+      inputCostUSD: Number(costInput.toFixed(6)),
+      cacheCostUSD: Number(costCache.toFixed(6)),
+      outputCostUSD: Number(costOutput.toFixed(6)),
       isPriced: true,
       modelKey,
       matchedTier,
@@ -1540,6 +1543,9 @@
 
   function summarizeApiCost(requests = [], extraUnpricedCount = 0, extraUnpricedReasons = {}, extraUnpricedTokens = 0) {
     let pricedCostUSD = 0;
+    let pricedInputCostUSD = 0;
+    let pricedCacheCostUSD = 0;
+    let pricedOutputCostUSD = 0;
     let pricedTokens = 0;
     let pricedInputTokens = 0;
     let pricedCacheTokens = 0;
@@ -1554,11 +1560,15 @@
       missingUsage: Number(extraUnpricedReasons.missingUsage || 0)
     };
     const byModel = {};
+    const unpricedByModel = {};
 
     for (const req of requests) {
       const calc = calculateRequestApiCost(req);
       if (calc.isPriced) {
         pricedCostUSD += calc.costUSD;
+        pricedInputCostUSD += (calc.inputCostUSD || 0);
+        pricedCacheCostUSD += (calc.cacheCostUSD || 0);
+        pricedOutputCostUSD += (calc.outputCostUSD || 0);
         pricedTokens += calc.totalTokens;
         pricedInputTokens += (calc.inputTokens || 0);
         pricedCacheTokens += (calc.cacheTokens || 0);
@@ -1581,7 +1591,15 @@
         const rawM = extractModelString(req);
         if (!rawM) unpricedReasons.missingModel += 1;
         else if (tot === 0) unpricedReasons.missingUsage += 1;
-        else unpricedReasons.unsupportedModel += 1;
+        else {
+          unpricedReasons.unsupportedModel += 1;
+          const mLabel = String(rawM).trim();
+          if (mLabel) {
+            if (!unpricedByModel[mLabel]) unpricedByModel[mLabel] = { requests: 0, tokens: 0 };
+            unpricedByModel[mLabel].requests += 1;
+            unpricedByModel[mLabel].tokens += tot;
+          }
+        }
       }
     }
 
@@ -1626,14 +1644,190 @@
         inputTokens: pricedInputTokens,
         cacheTokens: pricedCacheTokens,
         outputTokens: pricedOutputTokens,
-        thinkingTokens: pricedThinkingTokens
+        thinkingTokens: pricedThinkingTokens,
+        inputCostUSD: Number((Math.round((pricedInputCostUSD + Number.EPSILON) * 10000) / 10000).toFixed(4)),
+        cacheCostUSD: Number((Math.round((pricedCacheCostUSD + Number.EPSILON) * 10000) / 10000).toFixed(4)),
+        outputCostUSD: Number((Math.round((pricedOutputCostUSD + Number.EPSILON) * 10000) / 10000).toFixed(4))
       },
       coveragePercent,
       tokenCoveragePercent,
       requestCoveragePercent,
       isPartialCoverage,
       unpricedReasons,
-      byModel
+      byModel,
+      unpricedByModel
+    };
+  }
+
+  function computeBillingCycleRange(nowInput = new Date(), billingDayInput = 1) {
+    const dt = nowInput instanceof Date ? nowInput : new Date(nowInput);
+    const safeDt = Number.isNaN(dt.getTime()) ? new Date() : dt;
+    const rawDay = Math.floor(Number(billingDayInput));
+    const billingDay = Number.isFinite(rawDay) ? Math.min(31, Math.max(1, rawDay)) : 1;
+
+    const daysInMonth = (year, monthIdx) => new Date(year, monthIdx + 1, 0).getDate();
+    const pad2 = (n) => String(n).padStart(2, '0');
+    const fmtYmd = (d) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+    const fmtMd = (d) => `${pad2(d.getMonth() + 1)}/${pad2(d.getDate())}`;
+
+    const y = safeDt.getFullYear();
+    const m = safeDt.getMonth();
+    const todayDay = safeDt.getDate();
+    const anchorThisMonth = Math.min(billingDay, daysInMonth(y, m));
+
+    let startDt;
+    let nextStartDt;
+    if (todayDay >= anchorThisMonth) {
+      startDt = new Date(y, m, anchorThisMonth);
+      const nextY = m === 11 ? y + 1 : y;
+      const nextM = (m + 1) % 12;
+      nextStartDt = new Date(nextY, nextM, Math.min(billingDay, daysInMonth(nextY, nextM)));
+    } else {
+      const prevY = m === 0 ? y - 1 : y;
+      const prevM = (m + 11) % 12;
+      startDt = new Date(prevY, prevM, Math.min(billingDay, daysInMonth(prevY, prevM)));
+      nextStartDt = new Date(y, m, anchorThisMonth);
+    }
+    const endDt = new Date(nextStartDt.getFullYear(), nextStartDt.getMonth(), nextStartDt.getDate() - 1);
+
+    const startDate = fmtYmd(startDt);
+    const endDate = fmtYmd(endDt);
+    return {
+      billingDay,
+      startDate,
+      endDate,
+      label: `${fmtMd(startDt)} – ${fmtMd(endDt)}`,
+      fullLabel: `${startDate} ~ ${endDate}`
+    };
+  }
+
+  function aggregateDailyCostRange(dailyMap = {}, dailyCostMap = {}, startYmd = '', endYmd = '') {
+    const inRange = (d) => {
+      if (!d || typeof d !== 'string') return false;
+      if (startYmd && d < startYmd) return false;
+      if (endYmd && d > endYmd) return false;
+      return true;
+    };
+
+    let inputTokens = 0;
+    let cacheTokens = 0;
+    let outputTokens = 0;
+    let totalTokens = 0;
+    if (dailyMap && typeof dailyMap === 'object') {
+      for (const [d, row] of Object.entries(dailyMap)) {
+        if (!inRange(d) || !row || typeof row !== 'object') continue;
+        const inp = safeNonNegNum(row.input);
+        const cac = safeNonNegNum(row.cache);
+        const out = safeNonNegNum(row.output);
+        const tot = safeNonNegNum(row.total ?? (inp + cac + out));
+        inputTokens += inp;
+        cacheTokens += cac;
+        outputTokens += out;
+        totalTokens += tot;
+      }
+    }
+
+    let pricedCostUSD = 0;
+    let pricedInputCostUSD = 0;
+    let pricedCacheCostUSD = 0;
+    let pricedOutputCostUSD = 0;
+    let pricedInputTokens = 0;
+    let pricedCacheTokens = 0;
+    let pricedOutputTokens = 0;
+    let pricedThinkingTokens = 0;
+    let pricedTokens = 0;
+    let unpricedTokens = 0;
+    let pricedRequestsCount = 0;
+    let unpricedRequestsCount = 0;
+    const unpricedReasons = { missingModel: 0, unsupportedModel: 0, missingUsage: 0 };
+    const byModel = {};
+    const unpricedByModel = {};
+
+    if (dailyCostMap && typeof dailyCostMap === 'object') {
+      for (const [d, c] of Object.entries(dailyCostMap)) {
+        if (!inRange(d) || !c || typeof c !== 'object') continue;
+        pricedCostUSD += safeNonNegNum(c.pricedCostUSD);
+        pricedInputCostUSD += safeNonNegNum(c.inputCostUSD);
+        pricedCacheCostUSD += safeNonNegNum(c.cacheCostUSD);
+        pricedOutputCostUSD += safeNonNegNum(c.outputCostUSD);
+        pricedInputTokens += safeNonNegNum(c.inputTokens);
+        pricedCacheTokens += safeNonNegNum(c.cacheTokens);
+        pricedOutputTokens += safeNonNegNum(c.outputTokens);
+        pricedThinkingTokens += safeNonNegNum(c.thinkingTokens);
+        pricedTokens += safeNonNegNum(c.pricedTokens);
+        unpricedTokens += safeNonNegNum(c.unpricedTokens);
+        pricedRequestsCount += safeNonNegNum(c.pricedRequestsCount);
+        unpricedRequestsCount += safeNonNegNum(c.unpricedRequestsCount);
+        if (c.unpricedReasons) {
+          unpricedReasons.missingModel += safeNonNegNum(c.unpricedReasons.missingModel);
+          unpricedReasons.unsupportedModel += safeNonNegNum(c.unpricedReasons.unsupportedModel);
+          unpricedReasons.missingUsage += safeNonNegNum(c.unpricedReasons.missingUsage);
+        }
+        if (c.byModel && typeof c.byModel === 'object') {
+          for (const [mk, mv] of Object.entries(c.byModel)) {
+            if (!mv) continue;
+            if (!byModel[mk]) byModel[mk] = { requests: 0, costUSD: 0, tokens: 0 };
+            byModel[mk].requests += safeNonNegNum(mv.requests);
+            byModel[mk].costUSD = Number((byModel[mk].costUSD + safeNonNegNum(mv.costUSD)).toFixed(6));
+            byModel[mk].tokens += safeNonNegNum(mv.tokens);
+          }
+        }
+        if (c.unpricedByModel && typeof c.unpricedByModel === 'object') {
+          for (const [umk, umv] of Object.entries(c.unpricedByModel)) {
+            if (!umv) continue;
+            if (!unpricedByModel[umk]) unpricedByModel[umk] = { requests: 0, tokens: 0 };
+            unpricedByModel[umk].requests += safeNonNegNum(umv.requests);
+            unpricedByModel[umk].tokens += safeNonNegNum(umv.tokens);
+          }
+        }
+      }
+    }
+
+    // 补齐 dailyMap 中存在但 dailyCostMap 未覆盖的归档残差 token
+    const coveredTokens = pricedTokens + unpricedTokens;
+    if (totalTokens > coveredTokens) {
+      unpricedTokens += (totalTokens - coveredTokens);
+    }
+
+    const totalRequests = pricedRequestsCount + unpricedRequestsCount;
+    const totalTok = pricedTokens + unpricedTokens;
+    let coveragePercent = null;
+    if (totalRequests > 0 || unpricedTokens > 0) {
+      const reqCov = totalRequests > 0 ? Number(((pricedRequestsCount / totalRequests) * 100).toFixed(1)) : null;
+      const tokCov = totalTok > 0 ? Number(((pricedTokens / totalTok) * 100).toFixed(1)) : null;
+      if (pricedRequestsCount === 0) {
+        coveragePercent = 0;
+      } else if (unpricedRequestsCount > 0 || unpricedTokens > 0) {
+        coveragePercent = unpricedTokens === 0 ? reqCov : Math.min(tokCov ?? (reqCov ?? 100), reqCov ?? 100);
+        if (coveragePercent >= 100) coveragePercent = 99.9;
+      } else {
+        coveragePercent = 100;
+      }
+    }
+
+    return {
+      totals: { inputTokens, cacheTokens, outputTokens, totalTokens },
+      costEstimate: {
+        pricedCostUSD: Number((Math.round((pricedCostUSD + Number.EPSILON) * 10000) / 10000).toFixed(4)),
+        pricedRequestsCount,
+        unpricedRequestsCount,
+        pricedTokens,
+        unpricedTokens,
+        byCategory: {
+          inputTokens: pricedInputTokens,
+          cacheTokens: pricedCacheTokens,
+          outputTokens: pricedOutputTokens,
+          thinkingTokens: pricedThinkingTokens,
+          inputCostUSD: Number((Math.round((pricedInputCostUSD + Number.EPSILON) * 10000) / 10000).toFixed(4)),
+          cacheCostUSD: Number((Math.round((pricedCacheCostUSD + Number.EPSILON) * 10000) / 10000).toFixed(4)),
+          outputCostUSD: Number((Math.round((pricedOutputCostUSD + Number.EPSILON) * 10000) / 10000).toFixed(4))
+        },
+        coveragePercent,
+        isPartialCoverage: Boolean(pricedRequestsCount > 0 && (unpricedRequestsCount > 0 || unpricedTokens > 0)),
+        unpricedReasons,
+        byModel,
+        unpricedByModel
+      }
     };
   }
 
@@ -2035,6 +2229,14 @@
       const knownCache = Number(ku.cacheTokens ?? ku.cacheReadTokens ?? ku.byCategory?.cacheTokens ?? ku.cache ?? 0);
       const knownOut = Number(ku.outputTokens ?? ku.byCategory?.outputTokens ?? ku.output ?? 0);
       const knownCost = Number(ku.costUSD ?? ku.pricedCostUSD ?? 0);
+      const hasKnownCategoryCosts = (
+        ku.byCategory?.inputCostUSD !== undefined ||
+        ku.byCategory?.cacheCostUSD !== undefined ||
+        ku.byCategory?.outputCostUSD !== undefined
+      );
+      const knownInCost = Number(ku.byCategory?.inputCostUSD || 0);
+      const knownCacheCost = Number(ku.byCategory?.cacheCostUSD || 0);
+      const knownOutCost = Number(ku.byCategory?.outputCostUSD || 0);
 
       const residualIn = Math.max(0, input - knownIn);
       const residualCache = Math.max(0, cache - knownCache);
@@ -2058,6 +2260,18 @@
           inputCostUSD: Number(resInCost.toFixed(4)),
           cacheCostUSD: Number(resCacheCost.toFixed(4)),
           outputCostUSD: Number(resOutCost.toFixed(4))
+        },
+        totalBreakdown: {
+          hasKnownCategoryCosts,
+          input,
+          cache,
+          output,
+          knownInput: knownIn,
+          knownCache,
+          knownOutput: knownOut,
+          inputCostUSD: hasKnownCategoryCosts ? Number((knownInCost + resInCost).toFixed(4)) : Number(resInCost.toFixed(4)),
+          cacheCostUSD: hasKnownCategoryCosts ? Number((knownCacheCost + resCacheCost).toFixed(4)) : Number(resCacheCost.toFixed(4)),
+          outputCostUSD: hasKnownCategoryCosts ? Number((knownOutCost + resOutCost).toFixed(4)) : Number(resOutCost.toFixed(4))
         }
       };
     }
@@ -2479,6 +2693,13 @@
       ? (source === 'all' ? (dailyModelMapBySource.all || {}) : (dailyModelMapBySource[source] || {}))
       : (source === 'all' ? (payload.dailyModelMap || {}) : {});
 
+    const dailyCostMapBySource = payload.dailyCostMapBySource && typeof payload.dailyCostMapBySource === 'object'
+      ? payload.dailyCostMapBySource
+      : null;
+    const dailyCostMap = dailyCostMapBySource
+      ? (source === 'all' ? (dailyCostMapBySource.all || {}) : (dailyCostMapBySource[source] || {}))
+      : (source === 'all' ? (payload.dailyCostMap || {}) : {});
+
     return {
       schemaVersion: payload.schemaVersion || '0.0.1',
       version: payload.version || '0.0.1',
@@ -2503,6 +2724,8 @@
       dailyMapBySource,
       dailyModelMap,
       dailyModelMapBySource,
+      dailyCostMap,
+      dailyCostMapBySource,
       modelMetaByKey: payload.modelMetaByKey || null
     };
   }
@@ -5695,6 +5918,8 @@
     MAX_SPEED_SAMPLES_PER_MODEL,
     calculateRequestApiCost,
     summarizeApiCost,
+    computeBillingCycleRange,
+    aggregateDailyCostRange,
     calculateReferenceModelCost,
     resolveEffectivePlanStatus,
     sanitizeLegacyPlanTierName,

@@ -1824,6 +1824,16 @@ function sanitizeUiPreferences(rawUi, prevUi = {}) {
     if (cleanPills) merged.topbarPills = cleanPills;
     else delete merged.topbarPills;
   }
+  if (merged.billingDay !== undefined) {
+    const bd = Math.floor(Number(merged.billingDay));
+    if (Number.isFinite(bd) && bd >= 1 && bd <= 31) merged.billingDay = bd;
+    else delete merged.billingDay;
+  }
+  if (merged.costScope !== undefined) {
+    if (merged.costScope !== 'period' && merged.costScope !== 'cycle' && merged.costScope !== 'all') {
+      delete merged.costScope;
+    }
+  }
   return merged;
 }
 
@@ -4251,6 +4261,86 @@ async function collectTokenHistoryCoreAsync(options = {}, extraContext = {}) {
     monthCliUnpriced.tokens
   );
 
+  // 按日计费聚合映射（供自然月 / 自定义订阅周期瞬时切换，零重复扫描）
+  const dailyCostMapBySource = { all: {}, desktop: {}, cli: {} };
+  const ensureDailyCostBucket = (src, dayKey) => {
+    if (!dailyCostMapBySource[src][dayKey]) {
+      dailyCostMapBySource[src][dayKey] = {
+        pricedCostUSD: 0,
+        inputCostUSD: 0,
+        cacheCostUSD: 0,
+        outputCostUSD: 0,
+        inputTokens: 0,
+        cacheTokens: 0,
+        outputTokens: 0,
+        thinkingTokens: 0,
+        pricedTokens: 0,
+        unpricedTokens: 0,
+        pricedRequestsCount: 0,
+        unpricedRequestsCount: 0,
+        unpricedReasons: { missingModel: 0, unsupportedModel: 0, missingUsage: 0 },
+        byModel: {},
+        unpricedByModel: {}
+      };
+    }
+    return dailyCostMapBySource[src][dayKey];
+  };
+  const recordDailyCostCall = (src, dayKey, req) => {
+    if (!dayKey) return;
+    const b = ensureDailyCostBucket(src, dayKey);
+    const calc = calculateRequestApiCost(req);
+    if (calc.isPriced) {
+      b.pricedCostUSD = Number((b.pricedCostUSD + calc.costUSD).toFixed(6));
+      b.inputCostUSD = Number((b.inputCostUSD + (calc.inputCostUSD || 0)).toFixed(6));
+      b.cacheCostUSD = Number((b.cacheCostUSD + (calc.cacheCostUSD || 0)).toFixed(6));
+      b.outputCostUSD = Number((b.outputCostUSD + (calc.outputCostUSD || 0)).toFixed(6));
+      b.inputTokens += (calc.inputTokens || 0);
+      b.cacheTokens += (calc.cacheTokens || 0);
+      b.outputTokens += (calc.outputTokens || 0);
+      b.thinkingTokens += (calc.thinkingTokens || 0);
+      b.pricedTokens += calc.totalTokens;
+      b.pricedRequestsCount += 1;
+      if (!b.byModel[calc.modelKey]) b.byModel[calc.modelKey] = { requests: 0, costUSD: 0, tokens: 0 };
+      b.byModel[calc.modelKey].requests += 1;
+      b.byModel[calc.modelKey].costUSD = Number((b.byModel[calc.modelKey].costUSD + calc.costUSD).toFixed(6));
+      b.byModel[calc.modelKey].tokens += calc.totalTokens;
+    } else {
+      const inp = Number(req.inputTokens ?? req.input_tokens ?? req.input ?? 0) || 0;
+      const cap = Number(req.cacheTokens ?? req.cacheReadTokens ?? req.cache_read_tokens ?? req.cached ?? 0) || 0;
+      const outp = Number(req.outputTokens ?? req.output_tokens ?? req.output ?? 0) || 0;
+      const tot = Math.max(0, inp) + Math.max(0, cap) + Math.max(0, outp);
+      b.unpricedRequestsCount += 1;
+      b.unpricedTokens += tot;
+      const rawM = extractModelString(req);
+      if (!rawM) b.unpricedReasons.missingModel += 1;
+      else if (tot === 0) b.unpricedReasons.missingUsage += 1;
+      else {
+        b.unpricedReasons.unsupportedModel += 1;
+        const mLabel = String(rawM).trim();
+        if (mLabel) {
+          if (!b.unpricedByModel[mLabel]) b.unpricedByModel[mLabel] = { requests: 0, tokens: 0 };
+          b.unpricedByModel[mLabel].requests += 1;
+          b.unpricedByModel[mLabel].tokens += tot;
+        }
+      }
+    }
+  };
+  for (const [ledgerKey, c] of finalCallsEntries) {
+    if (!c) continue;
+    const effDate = resolveLedgerCallDate(ledgerKey, c);
+    if (!effDate) continue;
+    const src = c.source === 'cli' ? 'cli' : 'desktop';
+    recordDailyCostCall('all', effDate, c);
+    recordDailyCostCall(src, effDate, c);
+  }
+  for (const r of unmatchedRecentUnpriced) {
+    const effDate = r?.date ? String(r.date).slice(0, 10) : '';
+    if (!effDate) continue;
+    const src = r.source === 'cli' ? 'cli' : 'desktop';
+    recordDailyCostCall('all', effDate, r);
+    recordDailyCostCall(src, effDate, r);
+  }
+
   // 9. 参考模型折算（官方标准价格表 2026-11-08）
   const referenceCostAll = calculateReferenceModelCost({
     inputTokens: totalInputTokens,
@@ -4520,6 +4610,8 @@ async function collectTokenHistoryCoreAsync(options = {}, extraContext = {}) {
       legacyUnallocated: mergedLegacyUnallocated
     },
     dailyModelMapBySource: modelBreakdown.dailyModelMapBySource,
+    dailyCostMap: dailyCostMapBySource.all,
+    dailyCostMapBySource,
     modelMetaByKey: modelBreakdown.modelMetaByKey
   };
 

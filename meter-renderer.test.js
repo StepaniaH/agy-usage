@@ -721,6 +721,19 @@ test('default current period API reference amount, independent subscription spen
             output: 8352728
           }
         }
+      },
+      currentMonthHybrid: {
+        modelKey: 'gemini-3.8-flash',
+        hybrid: {
+          knownCostUSD: 0.03,
+          unpricedResidualCostUSD: 69.47,
+          combinedTotalUSD: 69.50,
+          residualTokensBreakdown: {
+            input: 23990000,
+            cache: 553333333,
+            output: 2666667
+          }
+        }
       }
     }
   };
@@ -735,7 +748,7 @@ test('default current period API reference amount, independent subscription spen
   const grandVal = h.elements.get('cost-grand-val');
   assert.equal(titleEl.textContent, '本期 API 参考金额');
   assert.equal(periodTag.textContent, '2026-11 (自然月)');
-  assert.equal(grandVal.textContent, '约 $69.50');
+  assert.equal(grandVal.textContent, '$69.50');
 
   // 2) 验证并列展示的订阅支出（严禁回本或节省词汇）
   const subSpendVal = h.elements.get('cost-sub-spend-val');
@@ -752,7 +765,7 @@ test('default current period API reference amount, independent subscription spen
   h.elements.get('cost-btn-mode-ref').click();
   h.elements.get('cost-btn-scope-all').click();
   assert.equal(titleEl.textContent, '全量 API 参考金额');
-  assert.equal(grandVal.textContent, '约 $211.64');
+  assert.equal(grandVal.textContent, '$211.64');
   assert.equal(h.elements.get('cost-diff-summary').textContent, '全量累计');
 
   // 5) 测试 API 参考视图内聚的极简 USD 实付：设为 $0 免费并同步估值卡片
@@ -806,7 +819,7 @@ test('integrated verification: legacy payload without referenceCost calculates d
 
   const grandVal = h.elements.get('cost-grand-val');
   assert.notEqual(grandVal.textContent, '$0.00');
-  assert.equal(grandVal.textContent, '约 $0.01');
+  assert.equal(grandVal.textContent, '$0.01');
 
   // 分类 token 和金额验证
   const inVal = h.elements.get('ref-cost-input-val');
@@ -821,7 +834,7 @@ test('integrated verification: legacy payload without referenceCost calculates d
   const emptyLoadingPayload = { loading: true, dailyMap: {}, summary: { grandTotalTokens: 0 } };
   h.sandbox.__AGContextMeter.applyTokenHistoryPayload(emptyLoadingPayload);
   assert.equal(badgeAmt.textContent, '31.0K'); // 保持原有效值，严禁变 0！
-  assert.equal(grandVal.textContent, '约 $0.01');
+  assert.equal(grandVal.textContent, '$0.01');
 
   // 3. 验证 700px 宽屏稳态完整直展、常驻“API折算 · 非实付”及子视图切换零宽度跳变
   const detailsPane = h.elements.get('cost-details-pane');
@@ -4142,4 +4155,146 @@ test('new session (route null and empty /c/<uuid>) clears previous high-occupanc
   assert.equal(h.elements.get('refresh').disabled, false);
 
   api.dispose();
+});
+
+test('API Est. Cost defaults to hybrid actual-model pricing and renders actual per-category card costs without flat-rate labels', async () => {
+  const h = harness();
+  h.finishScan();
+  h.pending[0].resolve(response({
+    usage: { inputTokens: 10000, outputTokens: 1000 },
+    chatStartMetadata: { contextWindowMetadata: { maxContextTokens: 200000 } }
+  }));
+  await h.flush();
+
+  const core = require('./meter-core');
+  // gemini-4-carbon (2026-11-18): $2.00 / $0.10 / $10.00 per 1M -> in $20, cache $10, out $10 = $40
+  const calls = [
+    { model: 'gemini-4-carbon', date: '2026-11-18', inputTokens: 10000000, cacheTokens: 100000000, outputTokens: 1000000 }
+  ];
+  const ce = core.summarizeApiCost(calls, 1, { unsupportedModel: 1 }, 22200000);
+  // Total includes residual 2M input, 20M cache, 200K output (unpriced -> 3.8 Flash: $1.50 + $1.50 + $0.75 = $3.75)
+  const refMonth = core.calculateReferenceModelCost(
+    { inputTokens: 12000000, cacheTokens: 120000000, outputTokens: 1200000, totalTokens: 133200000 },
+    'gemini-3.8-flash',
+    { pricingDate: '2026-11-18', mode: 'all' }
+  );
+  const refMonthHybrid = core.calculateReferenceModelCost(
+    { inputTokens: 12000000, cacheTokens: 120000000, outputTokens: 1200000, totalTokens: 133200000 },
+    'gemini-3.8-flash',
+    { pricingDate: '2026-11-18', mode: 'unpriced_only', knownUsage: { byCategory: ce.byCategory, costUSD: ce.pricedCostUSD } }
+  );
+
+  h.sandbox.__AGContextMeter.applyTokenHistoryPayload({
+    updatedAt: '2026-11-18 12:00:00',
+    currentPeriod: { key: '2026-11', label: '2026-11 (自然月)', isCurrentMonth: true },
+    summary: {
+      grandTotalTokens: 133200000,
+      totalInputTokens: 12000000,
+      totalCacheTokens: 120000000,
+      totalOutputTokens: 1200000,
+      monthTokens: 133200000,
+      currentMonthInput: 12000000,
+      currentMonthCache: 120000000,
+      currentMonthOutput: 1200000
+    },
+    costEstimate: ce,
+    costEstimateCurrentMonth: ce,
+    referenceCost: {
+      all: refMonth,
+      currentMonth: refMonth,
+      hybrid: refMonthHybrid,
+      currentMonthHybrid: refMonthHybrid
+    }
+  });
+
+  h.elements.get('badge-tokens').click();
+  h.elements.get('tok-view-cost').click();
+
+  // 1) Default mode is hybrid: actual carbon ($40.00) + residual 3.8 Flash ($3.75) = $43.75 (NOT $22.50 reference-only)
+  assert.equal(h.elements.get('cost-grand-val').textContent, '$43.75');
+  assert.equal(h.elements.get('ref-cost-input-val').textContent, '$21.50');
+  assert.equal(h.elements.get('ref-cost-cache-val').textContent, '$11.50');
+  assert.equal(h.elements.get('ref-cost-output-val').textContent, '$10.75');
+  assert.equal(h.elements.get('ref-cost-input-rate').style.display, 'none');
+  assert.match(h.elements.get('cost-breakdown-info').textContent, /Gemini 4 Carbon \$40\.00/);
+
+  // 2) Switch to Identified only: actual carbon ($40.00), cards show actual carbon category costs ($20 / $10 / $10)
+  h.elements.get('cost-btn-mode-identified').click();
+  assert.equal(h.elements.get('cost-grand-val').textContent, '$40.00');
+  assert.equal(h.elements.get('ref-cost-input-val').textContent, '$20.00');
+  assert.equal(h.elements.get('ref-cost-cache-val').textContent, '$10.00');
+  assert.equal(h.elements.get('ref-cost-output-val').textContent, '$10.00');
+  assert.equal(h.elements.get('ref-cost-input-rate').style.display, 'none');
+
+  // 3) Switch to Reference model: flat 3.8 Flash ($22.50 = $9.00 + $9.00 + $4.50) and flat-rate labels shown
+  h.elements.get('cost-btn-mode-ref').click();
+  assert.equal(h.elements.get('cost-grand-val').textContent, '$22.50');
+  assert.equal(h.elements.get('ref-cost-input-val').textContent, '$9.00');
+  assert.equal(h.elements.get('ref-cost-cache-val').textContent, '$9.00');
+  assert.equal(h.elements.get('ref-cost-output-val').textContent, '$4.50');
+  assert.equal(h.elements.get('ref-cost-input-rate').style.display, '');
+
+  h.sandbox.__AGContextMeter.dispose();
+});
+
+test('API Est. Cost supports subscription billing cycle toggle and explains unpriced models', async () => {
+  const h = harness();
+  h.finishScan();
+  h.pending[0].resolve(response({
+    usage: { inputTokens: 10000, outputTokens: 1000 },
+    chatStartMetadata: { contextWindowMetadata: { maxContextTokens: 200000 } }
+  }));
+  await h.flush();
+
+  const today = new Date();
+  const pad2 = (n) => String(n).padStart(2, '0');
+  const todayYmd = `${today.getFullYear()}-${pad2(today.getMonth() + 1)}-${pad2(today.getDate())}`;
+
+  h.sandbox.__AGContextMeter.applyTokenHistoryPayload({
+    updatedAt: `${todayYmd} 12:00:00`,
+    currentPeriod: { key: todayYmd.slice(0, 7), label: `${todayYmd.slice(0, 7)} (自然月)`, isCurrentMonth: true },
+    summary: {
+      grandTotalTokens: 33300000,
+      totalInputTokens: 3000000,
+      totalCacheTokens: 30000000,
+      totalOutputTokens: 300000,
+      monthTokens: 33300000,
+      currentMonthInput: 3000000,
+      currentMonthCache: 30000000,
+      currentMonthOutput: 300000
+    },
+    dailyMap: {
+      [todayYmd]: { input: 3000000, cache: 30000000, output: 300000, total: 33300000 }
+    },
+    dailyCostMap: {
+      [todayYmd]: {
+        pricedCostUSD: 4,
+        inputCostUSD: 2,
+        cacheCostUSD: 1,
+        outputCostUSD: 1,
+        inputTokens: 1000000,
+        cacheTokens: 10000000,
+        outputTokens: 100000,
+        pricedTokens: 11100000,
+        unpricedTokens: 22200000,
+        pricedRequestsCount: 1,
+        unpricedRequestsCount: 1,
+        byModel: { 'gemini-4-carbon': { requests: 1, costUSD: 4, tokens: 11100000 } },
+        unpricedByModel: { 'Gemini 4 Neon': { requests: 1, tokens: 22200000 } }
+      }
+    }
+  });
+
+  h.elements.get('badge-tokens').click();
+  h.elements.get('tok-view-cost').click();
+  h.elements.get('cost-btn-scope-cycle').click();
+
+  assert.equal(h.elements.get('cost-billing-day-row').style.display, 'flex');
+  assert.equal(h.elements.get('cost-card-title').textContent, '本周期 API 参考金额');
+  // Carbon $4.00 + residual Neon (2M in $1.50 + 20M cache $1.50 + 200K out $0.75 = $3.75) = $7.75
+  assert.equal(h.elements.get('cost-grand-val').textContent, '$7.75');
+  assert.match(h.elements.get('cost-breakdown-info').textContent, /Gemini 4 Carbon \$4\.00/);
+  assert.match(h.elements.get('cost-breakdown-info').textContent, /Gemini 4 Neon/);
+
+  h.sandbox.__AGContextMeter.dispose();
 });

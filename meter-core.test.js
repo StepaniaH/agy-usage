@@ -3746,3 +3746,83 @@ test('Conversation DB gen_metadata backfill recovers missing transcript models a
     fsMod.rmSync(tmpRoot, { recursive: true, force: true });
   }
 });
+
+test('summarizeApiCost & calculateReferenceModelCost hybrid expose actual per-category model costs', () => {
+  // 2026-11-18: gemini-4-carbon ($2.00 / $0.10 / $10.00), gemini-4-hydrogen ($1.50 / $0.075 / $7.50)
+  const calls = [
+    { model: 'gemini-4-carbon', date: '2026-11-18', inputTokens: 10000000, cacheTokens: 100000000, outputTokens: 1000000 },
+    { model: 'gemini-4-hydrogen', date: '2026-11-18', inputTokens: 2000000, cacheTokens: 20000000, outputTokens: 200000 }
+  ];
+  const summary = summarizeApiCost(calls);
+  // carbon: in $20 + cache $10 + out $10 = $40
+  // hydrogen: in $3 + cache $1.5 + out $1.5 = $6
+  assert.equal(summary.pricedCostUSD, 46);
+  assert.equal(summary.byCategory.inputCostUSD, 23);
+  assert.equal(summary.byCategory.cacheCostUSD, 11.5);
+  assert.equal(summary.byCategory.outputCostUSD, 11.5);
+
+  // Add residual unpriced tokens: 2M input ($1.50), 20M cache ($1.50), 200K output ($0.75) at 3.8 Flash
+  const hybridRes = calculateReferenceModelCost({
+    inputTokens: 14000000,
+    cacheTokens: 140000000,
+    outputTokens: 1400000
+  }, 'gemini-3.8-flash', {
+    pricingDate: '2026-11-18',
+    mode: 'unpriced_only',
+    knownUsage: {
+      byCategory: summary.byCategory,
+      costUSD: summary.pricedCostUSD
+    }
+  });
+  assert.equal(hybridRes.hybrid.knownCostUSD, 46);
+  assert.equal(hybridRes.hybrid.unpricedResidualCostUSD, 3.75);
+  assert.equal(hybridRes.hybrid.combinedTotalUSD, 49.75);
+  assert.equal(hybridRes.hybrid.totalBreakdown.hasKnownCategoryCosts, true);
+  assert.equal(hybridRes.hybrid.totalBreakdown.inputCostUSD, 24.5);
+  assert.equal(hybridRes.hybrid.totalBreakdown.cacheCostUSD, 13);
+  assert.equal(hybridRes.hybrid.totalBreakdown.outputCostUSD, 12.25);
+});
+
+test('computeBillingCycleRange, aggregateDailyCostRange, and unpricedByModel tracking', () => {
+  const { computeBillingCycleRange, aggregateDailyCostRange } = require('./meter-core');
+
+  // Anchor day 12, today is 2026-11-20 -> 2026-11-12 ~ 2026-12-11
+  const r1 = computeBillingCycleRange(new Date(2026, 10, 20), 12);
+  assert.equal(r1.startDate, '2026-11-12');
+  assert.equal(r1.endDate, '2026-12-11');
+  assert.equal(r1.label, '11/12 – 12/11');
+
+  // Anchor day 25, today is 2026-11-20 -> 2026-10-25 ~ 2026-11-24
+  const r2 = computeBillingCycleRange(new Date(2026, 10, 20), 25);
+  assert.equal(r2.startDate, '2026-10-25');
+  assert.equal(r2.endDate, '2026-11-24');
+
+  // Anchor day 31 in November (30 days) -> clamps cleanly to Nov 30 / Oct 31
+  const r3 = computeBillingCycleRange(new Date(2026, 10, 20), 31);
+  assert.equal(r3.startDate, '2026-10-31');
+  assert.equal(r3.endDate, '2026-11-29');
+
+  // unpricedByModel records unsupported models cleanly
+  const unpSummary = summarizeApiCost([
+    { model: 'Gemini 4 Neon (Medium)', date: '2026-11-18', inputTokens: 1000000, cacheTokens: 5000000, outputTokens: 100000 }
+  ]);
+  assert.equal(unpSummary.unpricedReasons.unsupportedModel, 1);
+  assert.equal(unpSummary.unpricedByModel['Gemini 4 Neon (Medium)'].tokens, 6100000);
+
+  // aggregateDailyCostRange sums only days inside [startDate, endDate]
+  const dailyMap = {
+    '2026-10-24': { input: 999, cache: 0, output: 0, total: 999 },
+    '2026-10-25': { input: 1000000, cache: 10000000, output: 100000, total: 11100000 },
+    '2026-11-18': { input: 2000000, cache: 20000000, output: 200000, total: 22200000 }
+  };
+  const dailyCostMap = {
+    '2026-10-24': { pricedCostUSD: 99, pricedRequestsCount: 1, unpricedRequestsCount: 0, pricedTokens: 999, unpricedTokens: 0, inputTokens: 999, cacheTokens: 0, outputTokens: 0, inputCostUSD: 99, cacheCostUSD: 0, outputCostUSD: 0, byModel: {}, unpricedByModel: {} },
+    '2026-10-25': { pricedCostUSD: 4, pricedRequestsCount: 1, unpricedRequestsCount: 0, pricedTokens: 11100000, unpricedTokens: 0, inputTokens: 1000000, cacheTokens: 10000000, outputTokens: 100000, inputCostUSD: 2, cacheCostUSD: 1, outputCostUSD: 1, byModel: { 'gemini-4-carbon': { requests: 1, costUSD: 4, tokens: 11100000 } }, unpricedByModel: {} },
+    '2026-11-18': { pricedCostUSD: 0, pricedRequestsCount: 0, unpricedRequestsCount: 1, pricedTokens: 0, unpricedTokens: 22200000, inputTokens: 0, cacheTokens: 0, outputTokens: 0, inputCostUSD: 0, cacheCostUSD: 0, outputCostUSD: 0, byModel: {}, unpricedByModel: { 'Gemini 4 Neon': { requests: 1, tokens: 22200000 } } }
+  };
+  const agg = aggregateDailyCostRange(dailyMap, dailyCostMap, '2026-10-25', '2026-11-24');
+  assert.equal(agg.totals.totalTokens, 33300000);
+  assert.equal(agg.costEstimate.pricedCostUSD, 4);
+  assert.equal(agg.costEstimate.byModel['gemini-4-carbon'].costUSD, 4);
+  assert.equal(agg.costEstimate.unpricedByModel['Gemini 4 Neon'].tokens, 22200000);
+});

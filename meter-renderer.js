@@ -1533,20 +1533,40 @@
     .cost-top-title-group{display:flex;align-items:center;gap:6px;flex-wrap:wrap;min-width:0}
     .cost-card-title,.cost-card-heading{font-size:12px;font-weight:600;color:var(--ag-text-primary)}
     .cost-meta-pill{font-size:10px;padding:1px 7px;font-variant-numeric:tabular-nums}
-    .cost-scope-actions{display:inline-flex;align-items:center;gap:4px;flex-wrap:wrap}
-    .cost-compact-pill{padding:2px 8px;font-size:11px;border-radius:6px;background:var(--ag-surface-2)}
+    .cost-scope-actions{display:inline-flex;align-items:center;gap:2px}
+    .cost-compact-pill{padding:3px 8px;font-size:11px;border-radius:6px;background:transparent}
     .cost-compact-pill.active{background:var(--ag-surface-tile);box-shadow:var(--ag-tile-shadow)}
 
+    .cost-billing-day-row{
+      display:flex;align-items:center;gap:8px;flex-wrap:wrap;
+      padding:6px 10px;margin-bottom:10px;border-radius:8px;
+      background:var(--ag-surface-tile);box-shadow:var(--ag-tile-shadow);
+      font-size:11px;color:var(--ag-text-secondary);
+    }
+    .cost-billing-day-lbl{font-weight:500;color:var(--ag-text-secondary)}
+    .cost-billing-day-select{
+      font-size:11px;padding:2px 6px;border-radius:5px;
+      background:var(--ag-bg-input);color:var(--ag-text-primary);
+      border:1px solid var(--ag-hairline);outline:none;cursor:pointer;
+      font-variant-numeric:tabular-nums;
+    }
+    .cost-billing-day-select:focus{border-color:var(--ag-token-accent-default,#a78bfa)}
+    .cost-billing-range-txt{margin-left:auto;font-size:11px;color:var(--ag-text-muted);font-variant-numeric:tabular-nums}
+
     .cost-hero-grid{
-      display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap;
+      display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;
       padding-bottom:12px;margin-bottom:11px;border-bottom:1px solid var(--ag-hairline);
     }
+    .cost-hero-left{display:flex;flex-direction:column;gap:3px;min-width:0}
+    .cost-grand-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
     .cost-grand-val{
-      font-size:24px;font-weight:700;letter-spacing:-0.03em;line-height:1.12;
+      font-size:26px;font-weight:700;letter-spacing:-0.03em;line-height:1.1;
       color:var(--ag-text-primary);font-variant-numeric:tabular-nums;
     }
-    .cost-scope-desc{font-size:11px;color:var(--ag-text-muted);margin-top:3px;font-variant-numeric:tabular-nums}
-    .cost-grand-sub{font-size:11px;color:var(--ag-text-secondary);text-align:right;line-height:1.45;font-variant-numeric:tabular-nums}
+    .cost-scope-desc{font-size:11px;color:var(--ag-text-muted);font-variant-numeric:tabular-nums}
+    .cost-hero-right{display:flex;flex-direction:column;align-items:flex-end;gap:5px;min-width:0}
+    .cost-mode-switch{display:inline-flex;align-items:center;gap:2px}
+    .cost-grand-sub{font-size:11px;color:var(--ag-text-secondary);text-align:right;line-height:1.35;font-variant-numeric:tabular-nums}
 
     .cost-mode-row{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:9px}
     .cost-mode-lbl{font-size:11px;font-weight:500;color:var(--ag-text-secondary)}
@@ -2505,36 +2525,44 @@
             <span id="cost-non-paid-badge" class="key-pill pill-muted cost-meta-pill"
               data-i18n="cost.nonPaidBadge">参考估值</span>
           </div>
-          <div class="cost-scope-actions">
+          <div class="source-switch-bar cost-scope-actions">
             <button id="cost-btn-scope-period" class="switch-pill-btn cost-compact-pill active" type="button"
-              data-i18n="cost.scopePeriod">本期</button>
+              data-i18n="cost.scopePeriod">自然月</button>
+            <button id="cost-btn-scope-cycle" class="switch-pill-btn cost-compact-pill" type="button"
+              data-i18n="cost.scopeCycle">订阅周期</button>
             <button id="cost-btn-scope-all" class="switch-pill-btn cost-compact-pill" type="button"
-              data-i18n="cost.scopeAll">全量历史</button>
-            <span id="cost-coverage-pill" class="key-pill pill-muted cost-meta-pill">100%</span>
+              data-i18n="cost.scopeAll">全量</button>
           </div>
+        </div>
+
+        <div id="cost-billing-day-row" class="cost-billing-day-row" style="display:none">
+          <label for="cost-billing-day-select" class="cost-billing-day-lbl" data-i18n="cost.billingDayLabel">账单日</label>
+          <select id="cost-billing-day-select" class="cost-billing-day-select"></select>
+          <span id="cost-billing-range-txt" class="cost-billing-range-txt">—</span>
         </div>
 
         <div class="cost-hero-grid">
-          <div>
-            <div id="cost-grand-val" class="cost-grand-val">$0.00</div>
+          <div class="cost-hero-left">
+            <div class="cost-grand-row">
+              <div id="cost-grand-val" class="cost-grand-val">$0.00</div>
+              <span id="cost-coverage-pill" class="key-pill pill-muted cost-meta-pill">100%</span>
+            </div>
             <div id="cost-scope-desc" class="cost-scope-desc">—</div>
           </div>
-          <div id="cost-grand-sub" class="cost-grand-sub">—</div>
+          <div class="cost-hero-right">
+            <div class="source-switch-bar cost-mode-switch">
+              <button id="cost-btn-mode-hybrid" class="switch-pill-btn cost-compact-pill active" type="button"
+                data-i18n="cost.modeHybrid">混合</button>
+              <button id="cost-btn-mode-identified" class="switch-pill-btn cost-compact-pill" type="button"
+                data-i18n="cost.modeIdentified">仅已识别</button>
+              <button id="cost-btn-mode-ref" class="switch-pill-btn cost-compact-pill" type="button"
+                data-i18n="cost.modeRef">参考价</button>
+            </div>
+            <div id="cost-grand-sub" class="cost-grand-sub">—</div>
+          </div>
         </div>
 
         <div id="cost-details-pane">
-          <div class="cost-mode-row">
-            <span class="cost-mode-lbl" data-i18n="cost.modeLabel">估值模式:</span>
-            <div class="source-switch-bar">
-              <button id="cost-btn-mode-ref" class="switch-pill-btn cost-compact-pill active" type="button"
-                data-i18n="cost.modeRef">参考模型估算</button>
-              <button id="cost-btn-mode-hybrid" class="switch-pill-btn cost-compact-pill" type="button"
-                data-i18n="cost.modeHybrid">混合模式</button>
-              <button id="cost-btn-mode-identified" class="switch-pill-btn cost-compact-pill" type="button"
-                data-i18n="cost.modeIdentified">仅已识别模型</button>
-            </div>
-          </div>
-
           <div class="cost-summary-strip">
             <span id="cost-usage-summary" class="cost-usage-summary cost-usage-summary-txt">—</span>
             <span id="cost-diff-summary" class="cost-diff-summary cost-diff-summary-txt">—</span>
@@ -2542,17 +2570,17 @@
 
           <div id="ref-cost-breakdown-cards" class="ref-cost-grid">
             <div class="t-card ref-cost-card ref-cost-subcard">
-              <div class="ref-cost-lbl"><span data-i18n="cost.card.input">输入 Token</span> ($0.75/M)</div>
+              <div class="ref-cost-lbl"><span data-i18n="cost.card.input">输入 Token</span><span id="ref-cost-input-rate" style="display:none"> ($0.75/M)</span></div>
               <div id="ref-cost-input-val" class="ref-cost-val">$0.00</div>
               <div id="ref-cost-input-tok" class="ref-cost-tok">0 tok</div>
             </div>
             <div class="t-card ref-cost-card ref-cost-subcard">
-              <div class="ref-cost-lbl"><span data-i18n="cost.card.cache">缓存读取 (优惠)</span> ($0.075/M)</div>
+              <div class="ref-cost-lbl"><span data-i18n="cost.card.cache">缓存读取</span><span id="ref-cost-cache-rate" style="display:none"> ($0.075/M)</span></div>
               <div id="ref-cost-cache-val" class="ref-cost-val">$0.00</div>
               <div id="ref-cost-cache-tok" class="ref-cost-tok">0 tok</div>
             </div>
             <div class="t-card ref-cost-card ref-cost-subcard">
-              <div class="ref-cost-lbl"><span data-i18n="cost.card.output">输出 Token</span> ($3.75/M)</div>
+              <div class="ref-cost-lbl"><span data-i18n="cost.card.output">输出 Token</span><span id="ref-cost-output-rate" style="display:none"> ($3.75/M)</span></div>
               <div id="ref-cost-output-val" class="ref-cost-val">$0.00</div>
               <div id="ref-cost-output-tok" class="ref-cost-tok">0 tok</div>
             </div>
@@ -3200,40 +3228,47 @@ const PANEL_I18N = {
   'cost.subUnknown': { 'zh-CN': '订阅实付：未填写', 'zh-TW': '訂閱實付：未填寫', en: 'Plan paid: Not set' },
   'cost.btnExpand': { 'zh-CN': '展开详情 ▼', 'zh-TW': '展開詳細資訊 ▼', en: 'Show details ▼' },
   'cost.btnCollapse': { 'zh-CN': '收起详情 ▴', 'zh-TW': '收起詳細資訊 ▴', en: 'Hide details ▴' },
-  'cost.scopePeriod': { 'zh-CN': '本期', 'zh-TW': '本期', en: 'This period' },
-  'cost.scopeAll': { 'zh-CN': '全量历史', 'zh-TW': '完整歷史紀錄', en: 'All history' },
+  'cost.scopePeriod': { 'zh-CN': '自然月', 'zh-TW': '自然月', en: 'Calendar Mo' },
+  'cost.scopeCycle': { 'zh-CN': '订阅周期', 'zh-TW': '訂閱週期', en: 'Billing Cycle' },
+  'cost.scopeAll': { 'zh-CN': '全量', 'zh-TW': '完整歷史紀錄', en: 'All' },
+  'cost.titleCycle': { 'zh-CN': '本周期 API 参考金额', 'zh-TW': '本週期 API 參考金額', en: 'Billing Cycle API Value' },
+  'cost.billingDayLabel': { 'zh-CN': '账单日', 'zh-TW': '帳單日', en: 'Renewal day' },
+  'cost.billingDayOpt': { 'zh-CN': '每月 {d} 日', 'zh-TW': '每月 {d} 日', en: 'Day {d}' },
   'cost.modeLabel': { 'zh-CN': '估值模式:', 'zh-TW': '估算模式:', en: 'Pricing mode:' },
-  'cost.modeRef': { 'zh-CN': '参考模型估算', 'zh-TW': '參考模型估算', en: 'Reference model' },
-  'cost.modeHybrid': { 'zh-CN': '混合模式', 'zh-TW': '混合模式', en: 'Hybrid' },
-  'cost.modeIdentified': { 'zh-CN': '仅已识别模型', 'zh-TW': '僅已識別模型', en: 'Identified only' },
+  'cost.modeRef': { 'zh-CN': '参考价', 'zh-TW': '參考價', en: 'Reference' },
+  'cost.modeHybrid': { 'zh-CN': '混合', 'zh-TW': '混合', en: 'Hybrid' },
+  'cost.modeIdentified': { 'zh-CN': '仅已识别', 'zh-TW': '僅已識別', en: 'Identified' },
   'cost.card.input': { 'zh-CN': '输入 Token', 'zh-TW': '輸入 Token', en: 'Input Tokens' },
-  'cost.card.cache': { 'zh-CN': '缓存读取 (优惠)', 'zh-TW': '快取讀取 (優惠)', en: 'Cache Read (discounted)' },
+  'cost.card.cache': { 'zh-CN': '缓存读取', 'zh-TW': '快取讀取', en: 'Cache Read' },
   'cost.card.output': { 'zh-CN': '输出 Token', 'zh-TW': '輸出 Token', en: 'Output Tokens' },
   'cost.analyzing': { 'zh-CN': '正在分析请求模型与计价覆盖率…', 'zh-TW': '正在分析請求模型與計價覆蓋率…', en: 'Analyzing model calls and pricing coverage…' },
   'cost.disclaimer': { 'zh-CN': '按公开 API 单价折算（缓存 10%），仅作参考。', 'zh-TW': '依公開 API 單價換算（快取 10%），僅供參考。', en: 'Estimated at public API rates (10% cache read) for reference.' },
   'tokens.firstUse': { 'zh-CN': '首次使用：{date}', 'zh-TW': '首次使用：{date}', en: 'First use: {date}' },
   'cost.titleAll': { 'zh-CN': '全量 API 参考金额', 'zh-TW': '全量 API 參考金額', en: 'All-Time API Value' },
   'cost.allHistory': { 'zh-CN': '全历史累计', 'zh-TW': '全歷史累計', en: 'All history' },
-  'cost.approx': { 'zh-CN': '约 ${val}', 'zh-TW': '約 ${val}', en: '~${val}' },
+  'cost.approx': { 'zh-CN': '${val}', 'zh-TW': '${val}', en: '${val}' },
   'cost.notReady': { 'zh-CN': '数据未就绪', 'zh-TW': '資料尚未就緒', en: 'Not ready' },
   'cost.noRecords': { 'zh-CN': '暂无记录', 'zh-TW': '暫無記錄', en: 'No records' },
-  'cost.refSub': { 'zh-CN': '统一按 {model} 估算 (输入 ${in} / 缓存 ${ca} / 输出 ${out} 每百万 Token)', 'zh-TW': '統一依 {model} 估算 (輸入 ${in} / 快取 ${ca} / 輸出 ${out} 每百萬 Token)', en: 'Estimated via {model} (In ${in} / Cache ${ca} / Out ${out} per 1M)' },
-  'cost.hybridSub': { 'zh-CN': '混合模式：已识别 ${known} + 未知折算 ${res}', 'zh-TW': '混合模式：已識別 ${known} + 未知換算 ${res}', en: 'Hybrid: Identified ${known} + Residual ${res}' },
-  'cost.hybridBadge': { 'zh-CN': '混合模式折算', 'zh-TW': '混合模式換算', en: 'Hybrid mode' },
-  'cost.identSub': { 'zh-CN': '仅计入 {n} 条已知真实模型调用', 'zh-TW': '僅計入 {n} 筆已知真實模型呼叫', en: 'Only {n} identified model call(s) included' },
-  'cost.identSubNone': { 'zh-CN': '暂无已识别模型记录', 'zh-TW': '暫無已識別模型記錄', en: 'No identified model calls' },
+  'cost.refSub': { 'zh-CN': '{model} · In ${in} / Cache ${ca} / Out ${out} /1M', 'zh-TW': '{model} · In ${in} / Cache ${ca} / Out ${out} /1M', en: '{model} · In ${in} / Cache ${ca} / Out ${out} /1M' },
+  'cost.hybridSub': { 'zh-CN': '已计价 ${known} + 未收录折算 ${res}', 'zh-TW': '已計價 ${known} + 未收錄換算 ${res}', en: 'Priced ${known} + Fallback ${res}' },
+  'cost.hybridAllPriced': { 'zh-CN': '100% 按实际模型费率计价', 'zh-TW': '100% 依實際模型費率計價', en: '100% priced at actual model rates' },
+  'cost.hybridBadge': { 'zh-CN': '混合计价', 'zh-TW': '混合計價', en: 'Hybrid' },
+  'cost.identSub': { 'zh-CN': '仅计入 {n} 条已收录公开费率调用', 'zh-TW': '僅計入 {n} 筆已收錄公開費率呼叫', en: '{n} priced model call(s)' },
+  'cost.identSubNone': { 'zh-CN': '暂无已收录公开费率记录', 'zh-TW': '暫無已收錄公開費率記錄', en: 'No priced model calls' },
   'cost.covPct': { 'zh-CN': '{pct}% 计价覆盖', 'zh-TW': '{pct}% 計價覆蓋', en: '{pct}% priced' },
   'cost.tokCacheDiscount': { 'zh-CN': '{tok} tok (优惠)', 'zh-TW': '{tok} tok (優惠)', en: '{tok} tok (disc.)' },
-  'cost.tokResidual': { 'zh-CN': '剩余 {tok} tok', 'zh-TW': '剩餘 {tok} tok', en: 'Rem. {tok} tok' },
+  'cost.tokResidual': { 'zh-CN': '未计价 {tok} tok', 'zh-TW': '未計價 {tok} tok', en: 'Unpriced {tok} tok' },
   'cost.usageSummary': { 'zh-CN': '累计处理 Token: {total} (含 {cache} 缓存读取)', 'zh-TW': '累計處理 Token: {total} (含 {cache} 快取讀取)', en: 'Total tokens: {total} (incl. {cache} cache)' },
   'cost.diffAll': { 'zh-CN': '全量累计', 'zh-TW': '全量累計', en: 'All-time' },
-  'cost.diffFree': { 'zh-CN': '免费权益 · 等值 +${val}', 'zh-TW': '免費權益 · 等值 +${val}', en: 'Free plan · ~+${val} value' },
+  'cost.diffFree': { 'zh-CN': '免费权益 · +${val}', 'zh-TW': '免費權益 · +${val}', en: 'Free plan · +${val}' },
   'cost.diffPaid': { 'zh-CN': '较实付差额 {sign}${val}', 'zh-TW': '較實付差額 {sign}${val}', en: 'vs. paid {sign}${val}' },
   'cost.diffUnknown': { 'zh-CN': '', 'zh-TW': '', en: '' },
   'cost.subLineFree': { 'zh-CN': '订阅额外实付：{sym}0 ({src})', 'zh-TW': '訂閱額外實付：{sym}0 ({src})', en: 'Extra plan paid: {sym}0 ({src})' },
   'cost.subLinePaid': { 'zh-CN': '订阅实付：{sym}{val}{cny} ({cycle}{exp})', 'zh-TW': '訂閱實付：{sym}{val}{cny} ({cycle}{exp})', en: 'Plan paid: {sym}{val}{cny} ({cycle}{exp})' },
-  'cost.breakdownPrefix': { 'zh-CN': '已识别真实模型明细：{details}{note}。', 'zh-TW': '已識別真實模型明細：{details}{note}。', en: 'Identified models: {details}{note}.' },
-  'cost.breakdownNone': { 'zh-CN': '暂无已匹配真实模型', 'zh-TW': '暫無已匹配真實模型', en: 'No matched model calls yet' },
+  'cost.breakdownPrefix': { 'zh-CN': '已计价模型：{details}{note}', 'zh-TW': '已計價模型：{details}{note}', en: 'Priced models: {details}{note}' },
+  'cost.breakdownNone': { 'zh-CN': '暂无已匹配公开费率模型', 'zh-TW': '暫無已匹配公開費率模型', en: 'No matched priced models yet' },
+  'cost.unpricedModelsNote': { 'zh-CN': ' · 未收录费率：{models}', 'zh-TW': ' · 未收錄費率：{models}', en: ' · Unpriced (no public rate): {models}' },
+  'cost.unpricedLegacyNote': { 'zh-CN': ' · 旧归档无模型信息：{tok} tok', 'zh-TW': ' · 舊歸檔無模型資訊：{tok} tok', en: ' · Legacy archive (no model): {tok} tok' },
   'tokens.dailyAvg': { 'zh-CN': ' · 日均 ${val}', 'zh-TW': ' · 日均 ${val}', en: ' · Avg ${val}/d' },
   'tokens.srcAllLabel': { 'zh-CN': '全部来源', 'zh-TW': '全部來源', en: 'All Sources' },
   'tokens.srcDesktopLabel': { 'zh-CN': '桌面端', 'zh-TW': '桌面端', en: 'Desktop' },
@@ -3341,7 +3376,7 @@ const PANEL_I18N = {
   'cost.expiredTag': { 'zh-CN': ' · 已到期', 'zh-TW': ' · 已到期', en: ' · Expired' },
   'cost.freeActive': { 'zh-CN': '免费权益{extra}', 'zh-TW': '免費權益{extra}', en: 'Free plan{extra}' },
   'cost.covFull': { 'zh-CN': '100% 折算覆盖', 'zh-TW': '100% 換算覆蓋', en: '100% priced' },
-  'cost.refApprox': { 'zh-CN': '约 ${val}', 'zh-TW': '約 ${val}', en: '~${val}' },
+  'cost.refApprox': { 'zh-CN': '${val}', 'zh-TW': '${val}', en: '${val}' },
   'dropdown.autoSaved': { 'zh-CN': '已自动保存', 'zh-TW': '已自動儲存', en: 'Auto-saved' },
   'dropdown.saveFailed': { 'zh-CN': '保存失败', 'zh-TW': '儲存失敗', en: 'Save failed' },
   'dropdown.saveFailedDetail': { 'zh-CN': '保存失败：{msg}', 'zh-TW': '儲存失敗：{msg}', en: 'Save failed: {msg}' },
@@ -10598,6 +10633,10 @@ function formatVendorLabel(vendor) {
       ANTIGRAVITY_TOKEN_DATA.dailyModelMap = src === 'all'
         ? (mBySrc.all || ANTIGRAVITY_TOKEN_DATA.dailyModelMap || {})
         : (mBySrc[src] || {});
+      const cBySrc = ANTIGRAVITY_TOKEN_DATA.dailyCostMapBySource || {};
+      ANTIGRAVITY_TOKEN_DATA.dailyCostMap = src === 'all'
+        ? (cBySrc.all || ANTIGRAVITY_TOKEN_DATA.dailyCostMap || {})
+        : (cBySrc[src] || {});
       renderActiveHeatView(true);
       renderActiveCostEstimateView();
       renderModelUsageView();
@@ -10964,18 +11003,90 @@ function formatVendorLabel(vendor) {
     renderModelUsageView();
   });
 
-  // 费用估算范围（默认本期：自然月）与估值模式（默认参考模型折算，首屏展示真实用量价值）
-  let activeCostScope = 'period'; // 'period' | 'all'
-  let costModelMode = 'ref'; // 'ref' | 'hybrid' | 'identified'
+  // 费用估算范围（自然月 / 订阅周期 / 全量）与估值模式（默认混合模式：已识别按实际模型费率，仅未收录残差按参考模型折算）
+  let activeCostScope = 'period'; // 'period' | 'cycle' | 'all'
+  let costModelMode = 'hybrid'; // 'hybrid' | 'identified' | 'ref'
+  let costBillingDay = 1;
+  let costPrefsHydrated = false;
 
-  function switchCostScope(scope) {
-    activeCostScope = scope;
-    setPillActive(el('cost-btn-scope-period'), scope === 'period');
-    setPillActive(el('cost-btn-scope-all'), scope === 'all');
+  const COST_MODEL_DISPLAY_NAMES = {
+    'gemini-3.8-flash': 'Gemini 3.8 Flash',
+    'gemini-4-hydrogen': 'Gemini 4 Hydrogen',
+    'gemini-4-carbon': 'Gemini 4 Carbon',
+    'gemini-4-argon': 'Gemini 4 Argon',
+    'gemini-3.1-pro-preview': 'Gemini 3.1 Pro',
+    'gemini-3.5-flash-lite': 'Gemini 3.5 Flash-Lite',
+    'gemini-2.5-pro': 'Gemini 2.5 Pro',
+    'claude-opus-5-5': 'Claude Opus 5.5',
+    'claude-sonnet-5-5': 'Claude Sonnet 5.5'
+  };
+
+  function populateBillingDayOptions() {
+    const sel = el('cost-billing-day-select');
+    if (!sel || typeof document === 'undefined' || typeof document.createElement !== 'function') return;
+    sel.innerHTML = '';
+    for (let d = 1; d <= 31; d += 1) {
+      const opt = document.createElement('option');
+      opt.value = String(d);
+      opt.textContent = t('cost.billingDayOpt', { d });
+      sel.appendChild(opt);
+    }
+    sel.value = String(costBillingDay);
+  }
+  populateBillingDayOptions();
+
+  function persistCostPrefs() {
+    if (typeof window?.contextMeterAPI?.saveSettings === 'function' || hasLiveHttpBridge()) {
+      void saveSettingsPayloadBridge({
+        uiPreferences: {
+          billingDay: costBillingDay,
+          costScope: activeCostScope
+        }
+      });
+    }
+  }
+
+  function hydrateCostPrefsFromSettings(uiPrefs) {
+    if (costPrefsHydrated || !uiPrefs || typeof uiPrefs !== 'object') return;
+    let changed = false;
+    const bd = Math.floor(Number(uiPrefs.billingDay));
+    if (Number.isFinite(bd) && bd >= 1 && bd <= 31) {
+      costBillingDay = bd;
+      const sel = el('cost-billing-day-select');
+      if (sel) sel.value = String(costBillingDay);
+      changed = true;
+    }
+    if (uiPrefs.costScope === 'period' || uiPrefs.costScope === 'cycle' || uiPrefs.costScope === 'all') {
+      activeCostScope = uiPrefs.costScope;
+      setPillActive(el('cost-btn-scope-period'), activeCostScope === 'period');
+      setPillActive(el('cost-btn-scope-cycle'), activeCostScope === 'cycle');
+      setPillActive(el('cost-btn-scope-all'), activeCostScope === 'all');
+      changed = true;
+    }
+    if (changed) costPrefsHydrated = true;
+  }
+
+  function switchCostScope(scope, persist = true) {
+    activeCostScope = (scope === 'cycle' || scope === 'all') ? scope : 'period';
+    costPrefsHydrated = true;
+    setPillActive(el('cost-btn-scope-period'), activeCostScope === 'period');
+    setPillActive(el('cost-btn-scope-cycle'), activeCostScope === 'cycle');
+    setPillActive(el('cost-btn-scope-all'), activeCostScope === 'all');
+    if (persist) persistCostPrefs();
     renderActiveCostEstimateView();
   }
-  el('cost-btn-scope-period')?.addEventListener('click', () => switchCostScope('period'));
-  el('cost-btn-scope-all')?.addEventListener('click', () => switchCostScope('all'));
+  el('cost-btn-scope-period')?.addEventListener('click', () => switchCostScope('period', true));
+  el('cost-btn-scope-cycle')?.addEventListener('click', () => switchCostScope('cycle', true));
+  el('cost-btn-scope-all')?.addEventListener('click', () => switchCostScope('all', true));
+  el('cost-billing-day-select')?.addEventListener('change', (e) => {
+    const val = Math.floor(Number(e?.target?.value));
+    if (Number.isFinite(val) && val >= 1 && val <= 31) {
+      costBillingDay = val;
+      costPrefsHydrated = true;
+      persistCostPrefs();
+      renderActiveCostEstimateView();
+    }
+  });
 
   function switchCostModelMode(mode) {
     costModelMode = mode;
@@ -10989,9 +11100,15 @@ function formatVendorLabel(vendor) {
   el('cost-btn-mode-identified')?.addEventListener('click', () => switchCostModelMode('identified'));
 
   function renderActiveCostEstimateView() {
+    hydrateCostPrefsFromSettings(ANTIGRAVITY_TOKEN_DATA.uiPreferences || window?.__AGContextMeterSettings?.uiPreferences);
     const isPeriod = activeCostScope === 'period';
+    const isCycle = activeCostScope === 'cycle';
+    const isMonthlyWindow = isPeriod || isCycle;
     const titleEl = el('cost-card-title');
     const periodTag = el('cost-period-tag');
+    const billingRow = el('cost-billing-day-row');
+    const billingRangeTxt = el('cost-billing-range-txt');
+    const billingSel = el('cost-billing-day-select');
     const grandVal = el('cost-grand-val');
     const grandSub = el('cost-grand-sub');
     const covPill = el('cost-coverage-pill');
@@ -11007,49 +11124,94 @@ function formatVendorLabel(vendor) {
     // 分类卡片 DOM
     const inVal = el('ref-cost-input-val');
     const inTok = el('ref-cost-input-tok');
+    const inRateEl = el('ref-cost-input-rate');
     const caVal = el('ref-cost-cache-val');
     const caTok = el('ref-cost-cache-tok');
+    const caRateEl = el('ref-cost-cache-rate');
     const outVal = el('ref-cost-output-val');
     const outTok = el('ref-cost-output-tok');
+    const outRateEl = el('ref-cost-output-rate');
 
-    if (titleEl) titleEl.textContent = isPeriod ? t('cost.title') : t('cost.titleAll');
+    const core = typeof __AGContextMeterCore !== 'undefined' ? __AGContextMeterCore : null;
+    const cycleRange = (isCycle && core?.computeBillingCycleRange)
+      ? core.computeBillingCycleRange(new Date(), costBillingDay)
+      : null;
+
+    if (billingRow) billingRow.style.display = isCycle ? 'flex' : 'none';
+    if (billingSel) {
+      if (billingSel.options?.length === 0 || (billingSel.options?.[0] && billingSel.options[0].textContent !== t('cost.billingDayOpt', { d: 1 }))) {
+        populateBillingDayOptions();
+      }
+      if (billingSel.value !== String(costBillingDay)) billingSel.value = String(costBillingDay);
+    }
+    if (billingRangeTxt && cycleRange) billingRangeTxt.textContent = cycleRange.fullLabel;
+
+    if (titleEl) {
+      titleEl.textContent = isCycle ? t('cost.titleCycle') : (isPeriod ? t('cost.title') : t('cost.titleAll'));
+    }
     if (periodTag) {
-      const pKey = ANTIGRAVITY_TOKEN_DATA.currentPeriod?.label || t('cost.periodTag');
-      periodTag.textContent = isPeriod ? pKey : t('cost.allHistory');
+      if (isCycle && cycleRange) {
+        periodTag.textContent = cycleRange.label;
+      } else {
+        const pKey = ANTIGRAVITY_TOKEN_DATA.currentPeriod?.label || t('cost.periodTag');
+        periodTag.textContent = isPeriod ? pKey : t('cost.allHistory');
+      }
     }
 
     // 1. 提取当前范围真实用量与折算数据
-    const curIn = isPeriod
-      ? Number(ANTIGRAVITY_TOKEN_DATA.summary?.currentMonthInput || 0)
-      : Number(ANTIGRAVITY_TOKEN_DATA.summary?.totalInputTokens || 0);
-    const curCa = isPeriod
-      ? Number(ANTIGRAVITY_TOKEN_DATA.summary?.currentMonthCache || 0)
-      : Number(ANTIGRAVITY_TOKEN_DATA.summary?.totalCacheTokens || 0);
-    const curOut = isPeriod
-      ? Number(ANTIGRAVITY_TOKEN_DATA.summary?.currentMonthOutput || 0)
-      : Number(ANTIGRAVITY_TOKEN_DATA.summary?.totalOutputTokens || 0);
-    const curTotal = isPeriod
-      ? Number(ANTIGRAVITY_TOKEN_DATA.summary?.monthTokens || (curIn + curCa + curOut))
-      : Number(ANTIGRAVITY_TOKEN_DATA.summary?.grandTotalTokens || (curIn + curCa + curOut));
+    const emptyCostEst = { pricedCostUSD: 0, pricedRequestsCount: 0, unpricedRequestsCount: 0, coveragePercent: null, byModel: {}, unpricedByModel: {}, byCategory: { inputTokens: 0, cacheTokens: 0, outputTokens: 0, thinkingTokens: 0 } };
+    let curIn = 0;
+    let curCa = 0;
+    let curOut = 0;
+    let curTotal = 0;
+    let curRef = {};
+    let curIdentified = emptyCostEst;
+    let rawHybrid = null;
 
-    const refAll = ANTIGRAVITY_TOKEN_DATA.referenceCost?.all || {};
-    const refMonth = ANTIGRAVITY_TOKEN_DATA.referenceCost?.currentMonth || {};
-    const refHybridAll = ANTIGRAVITY_TOKEN_DATA.referenceCost?.hybrid || {};
-    const refHybridMonth = ANTIGRAVITY_TOKEN_DATA.referenceCost?.currentMonthHybrid || refHybridAll;
+    if (isCycle && cycleRange && core?.aggregateDailyCostRange) {
+      const scopedDailyMap = ANTIGRAVITY_TOKEN_DATA.dailyMap || {};
+      const dcSourceMap = ANTIGRAVITY_TOKEN_DATA.dailyCostMapBySource || {};
+      const scopedDailyCostMap = activeTokenSource === 'all'
+        ? (dcSourceMap.all || ANTIGRAVITY_TOKEN_DATA.dailyCostMap || {})
+        : (dcSourceMap[activeTokenSource] || ANTIGRAVITY_TOKEN_DATA.dailyCostMap || {});
+      const agg = core.aggregateDailyCostRange(scopedDailyMap, scopedDailyCostMap, cycleRange.startDate, cycleRange.endDate);
+      curIn = agg.totals.inputTokens;
+      curCa = agg.totals.cacheTokens;
+      curOut = agg.totals.outputTokens;
+      curTotal = agg.totals.totalTokens;
+      curIdentified = agg.costEstimate;
+    } else {
+      curIn = isPeriod
+        ? Number(ANTIGRAVITY_TOKEN_DATA.summary?.currentMonthInput || 0)
+        : Number(ANTIGRAVITY_TOKEN_DATA.summary?.totalInputTokens || 0);
+      curCa = isPeriod
+        ? Number(ANTIGRAVITY_TOKEN_DATA.summary?.currentMonthCache || 0)
+        : Number(ANTIGRAVITY_TOKEN_DATA.summary?.totalCacheTokens || 0);
+      curOut = isPeriod
+        ? Number(ANTIGRAVITY_TOKEN_DATA.summary?.currentMonthOutput || 0)
+        : Number(ANTIGRAVITY_TOKEN_DATA.summary?.totalOutputTokens || 0);
+      curTotal = isPeriod
+        ? Number(ANTIGRAVITY_TOKEN_DATA.summary?.monthTokens || (curIn + curCa + curOut))
+        : Number(ANTIGRAVITY_TOKEN_DATA.summary?.grandTotalTokens || (curIn + curCa + curOut));
 
-    const curRef = isPeriod ? refMonth : refAll;
-    const curHybrid = isPeriod ? refHybridMonth : refHybridAll;
+      const refAll = ANTIGRAVITY_TOKEN_DATA.referenceCost?.all || {};
+      const refMonth = ANTIGRAVITY_TOKEN_DATA.referenceCost?.currentMonth || {};
+      curRef = isPeriod ? refMonth : refAll;
 
-    const emptyCostEst = { pricedCostUSD: 0, pricedRequestsCount: 0, unpricedRequestsCount: 0, coveragePercent: null, byModel: {}, byCategory: { inputTokens: 0, cacheTokens: 0, outputTokens: 0, thinkingTokens: 0 } };
-    const ceSourceMap = ANTIGRAVITY_TOKEN_DATA.costEstimateBySource || {};
-    const ceAll = activeTokenSource === 'all'
-      ? (ceSourceMap.all || ANTIGRAVITY_TOKEN_DATA.costEstimate || emptyCostEst)
-      : (ceSourceMap[activeTokenSource] || emptyCostEst);
-    const ceMonthSourceMap = ANTIGRAVITY_TOKEN_DATA.costEstimateCurrentMonthBySource || {};
-    const cePeriod = activeTokenSource === 'all'
-      ? (ceMonthSourceMap.all || ANTIGRAVITY_TOKEN_DATA.costEstimateCurrentMonth || ceAll)
-      : (ceMonthSourceMap[activeTokenSource] || emptyCostEst);
-    const curIdentified = isPeriod ? cePeriod : ceAll;
+      const ceSourceMap = ANTIGRAVITY_TOKEN_DATA.costEstimateBySource || {};
+      const ceAll = activeTokenSource === 'all'
+        ? (ceSourceMap.all || ANTIGRAVITY_TOKEN_DATA.costEstimate || emptyCostEst)
+        : (ceSourceMap[activeTokenSource] || emptyCostEst);
+      const ceMonthSourceMap = ANTIGRAVITY_TOKEN_DATA.costEstimateCurrentMonthBySource || {};
+      const cePeriod = activeTokenSource === 'all'
+        ? (ceMonthSourceMap.all || ANTIGRAVITY_TOKEN_DATA.costEstimateCurrentMonth || ceAll)
+        : (ceMonthSourceMap[activeTokenSource] || emptyCostEst);
+      curIdentified = isPeriod ? cePeriod : ceAll;
+
+      rawHybrid = isPeriod
+        ? ANTIGRAVITY_TOKEN_DATA.referenceCost?.currentMonthHybrid
+        : ANTIGRAVITY_TOKEN_DATA.referenceCost?.hybrid;
+    }
 
     let apiCost = 0;
     let pillText = t('cost.covFull');
@@ -11058,7 +11220,6 @@ function formatVendorLabel(vendor) {
     // 2. 估值模式计算
     let effectiveRef = curRef;
     if ((effectiveRef.totalCostUSD === undefined || effectiveRef.totalCostUSD === null) && curTotal > 0) {
-      const core = typeof __AGContextMeterCore !== 'undefined' ? __AGContextMeterCore : null;
       if (core && core.calculateReferenceModelCost) {
         effectiveRef = core.calculateReferenceModelCost({
           inputTokens: curIn,
@@ -11073,11 +11234,85 @@ function formatVendorLabel(vendor) {
     const rateCa = Number(effectiveRef.matchedTier?.cacheReadPerMillion ?? 0.075);
     const rateOut = Number(effectiveRef.matchedTier?.outputPerMillion ?? 3.75);
 
+    let effectiveHybrid = rawHybrid?.hybrid ? rawHybrid : null;
+    if (!effectiveHybrid) {
+      const knownCostRaw = Number(curIdentified.pricedCostUSD || 0);
+      if (knownCostRaw === 0 && effectiveRef.totalCostUSD !== undefined && effectiveRef.totalCostUSD !== null) {
+        const refTot = Number(effectiveRef.totalCostUSD || 0);
+        effectiveHybrid = {
+          hybrid: {
+            knownCostUSD: 0,
+            unpricedResidualTokens: curTotal || Number(effectiveRef.totalTokens || 0),
+            unpricedResidualCostUSD: refTot,
+            combinedTotalUSD: refTot,
+            residualTokensBreakdown: {
+              input: curIn || Number(effectiveRef.inputTokens || 0),
+              cache: curCa || Number(effectiveRef.cacheTokens || 0),
+              output: curOut || Number(effectiveRef.outputTokens || 0),
+              inputCostUSD: Number(effectiveRef.inputCostUSD ?? ((curIn || Number(effectiveRef.inputTokens || 0)) * rateIn / 1e6)),
+              cacheCostUSD: Number(effectiveRef.cacheCostUSD ?? ((curCa || Number(effectiveRef.cacheTokens || 0)) * rateCa / 1e6)),
+              outputCostUSD: Number(effectiveRef.outputCostUSD ?? ((curOut || Number(effectiveRef.outputTokens || 0)) * rateOut / 1e6))
+            },
+            totalBreakdown: {
+              hasKnownCategoryCosts: true,
+              input: curIn || Number(effectiveRef.inputTokens || 0),
+              cache: curCa || Number(effectiveRef.cacheTokens || 0),
+              output: curOut || Number(effectiveRef.outputTokens || 0),
+              knownInput: 0,
+              knownCache: 0,
+              knownOutput: 0,
+              inputCostUSD: Number(effectiveRef.inputCostUSD ?? ((curIn || Number(effectiveRef.inputTokens || 0)) * rateIn / 1e6)),
+              cacheCostUSD: Number(effectiveRef.cacheCostUSD ?? ((curCa || Number(effectiveRef.cacheTokens || 0)) * rateCa / 1e6)),
+              outputCostUSD: Number(effectiveRef.outputCostUSD ?? ((curOut || Number(effectiveRef.outputTokens || 0)) * rateOut / 1e6))
+            }
+          }
+        };
+      } else {
+        const hIn = curIn || Number(effectiveRef.inputTokens || 0);
+        const hCa = curCa || Number(effectiveRef.cacheTokens || 0);
+        const hOut = curOut || Number(effectiveRef.outputTokens || 0);
+        const hTot = curTotal || Number(effectiveRef.totalTokens || (hIn + hCa + hOut));
+        if (hTot > 0 || knownCostRaw > 0) {
+          if (core && core.calculateReferenceModelCost) {
+            effectiveHybrid = core.calculateReferenceModelCost({
+              inputTokens: hIn,
+              outputTokens: hOut,
+              cacheTokens: hCa,
+              totalTokens: hTot
+            }, 'gemini-3.8-flash', {
+              pricingDate: '2026-11-09',
+              mode: 'unpriced_only',
+              knownUsage: {
+                byCategory: curIdentified.byCategory,
+                costUSD: curIdentified.pricedCostUSD
+              }
+            });
+          }
+        }
+      }
+    }
+
+    const showFlatRate = costModelMode === 'ref';
+    if (inRateEl) {
+      inRateEl.textContent = ` ($${rateIn.toFixed(2)}/M)`;
+      inRateEl.style.display = showFlatRate ? '' : 'none';
+    }
+    if (caRateEl) {
+      caRateEl.textContent = ` ($${rateCa.toFixed(3)}/M)`;
+      caRateEl.style.display = showFlatRate ? '' : 'none';
+    }
+    if (outRateEl) {
+      outRateEl.textContent = ` ($${rateOut.toFixed(2)}/M)`;
+      outRateEl.style.display = showFlatRate ? '' : 'none';
+    }
+
     // 更新小摘要来源与时间描述行及非实付常驻标识
     const scopeDescEl = el('cost-scope-desc');
     if (scopeDescEl) {
       const srcName = activeTokenSource === 'desktop' ? t('tokens.srcDesktopLabel') : activeTokenSource === 'cli' ? 'CLI' : t('tokens.srcAllLabel');
-      const pLabel = isPeriod ? (ANTIGRAVITY_TOKEN_DATA.currentPeriod?.label || t('cost.periodTag')) : t('cost.allHistory');
+      const pLabel = isCycle && cycleRange
+        ? cycleRange.label
+        : (isPeriod ? (ANTIGRAVITY_TOKEN_DATA.currentPeriod?.label || t('cost.periodTag')) : t('cost.allHistory'));
       scopeDescEl.textContent = `${srcName} · ${pLabel}`;
     }
     const nonPaidBadge = el('cost-non-paid-badge');
@@ -11115,28 +11350,79 @@ function formatVendorLabel(vendor) {
       if (outVal) outVal.textContent = `$${Number(effectiveRef.outputCostUSD || (curOut * rateOut / 1e6)).toFixed(2)}`;
       if (outTok) outTok.textContent = `${fmtYi(curOut)} tok`;
     } else if (costModelMode === 'hybrid') {
-      const h = curHybrid.hybrid || {};
-      apiCost = Number(h.combinedTotalUSD || effectiveRef.totalCostUSD || 0);
+      const h = effectiveHybrid?.hybrid || {};
+      const knownCost = Number(h.knownCostUSD || 0);
+      const resCost = Number(h.unpricedResidualCostUSD || 0);
+      const hasHybridCombined = h.combinedTotalUSD !== undefined && h.combinedTotalUSD !== null;
+      apiCost = hasHybridCombined ? Number(h.combinedTotalUSD) : Number(effectiveRef.totalCostUSD || 0);
+
       if (grandVal) {
-        grandVal.textContent = t('cost.approx', { val: apiCost.toFixed(2) });
-        grandVal.title = t('cost.hybridSub', { known: h.knownCostUSD || 0, res: h.unpricedResidualCostUSD || 0 });
+        if (apiCost > 0) {
+          grandVal.textContent = `$${apiCost.toFixed(2)}`;
+          grandVal.title = resCost === 0 && knownCost > 0
+            ? t('cost.hybridAllPriced')
+            : t('cost.hybridSub', { known: knownCost.toFixed(2), res: resCost.toFixed(2) });
+        } else if (curTotal > 0 && curIn === 0 && curCa === 0 && curOut === 0) {
+          grandVal.textContent = t('cost.notReady');
+          grandVal.title = t('cost.notReady');
+        } else {
+          grandVal.textContent = '$0.00';
+          grandVal.title = t('cost.noRecords');
+        }
       }
       if (grandSub) {
-        grandSub.textContent = t('cost.hybridSub', {
-          known: Number(h.knownCostUSD || 0).toFixed(2),
-          res: Number(h.unpricedResidualCostUSD || 0).toFixed(2)
-        });
+        if (knownCost > 0 && resCost === 0) {
+          grandSub.textContent = t('cost.hybridAllPriced');
+        } else if (knownCost > 0 || resCost > 0) {
+          grandSub.textContent = t('cost.hybridSub', {
+            known: knownCost.toFixed(2),
+            res: resCost.toFixed(2)
+          });
+        } else {
+          grandSub.textContent = t('cost.refSub', {
+            model: effectiveRef.modelDisplayName || 'Gemini 3.8 Flash',
+            in: rateIn.toFixed(2),
+            ca: rateCa.toFixed(3),
+            out: rateOut.toFixed(2)
+          });
+        }
       }
       pillText = t('cost.hybridBadge');
       pillClass = 'key-pill pill-muted';
 
+      const tb = h.totalBreakdown;
       const rb = h.residualTokensBreakdown || {};
-      if (inVal) inVal.textContent = `$${Number(rb.inputCostUSD || (Number(rb.input || 0) * rateIn / 1e6)).toFixed(2)}`;
-      if (inTok) inTok.textContent = t('cost.tokResidual', { tok: fmtYi(rb.input || 0) });
-      if (caVal) caVal.textContent = `$${Number(rb.cacheCostUSD || (Number(rb.cache || 0) * rateCa / 1e6)).toFixed(2)}`;
-      if (caTok) caTok.textContent = t('cost.tokResidual', { tok: fmtYi(rb.cache || 0) });
-      if (outVal) outVal.textContent = `$${Number(rb.outputCostUSD || (Number(rb.output || 0) * rateOut / 1e6)).toFixed(2)}`;
-      if (outTok) outTok.textContent = t('cost.tokResidual', { tok: fmtYi(rb.output || 0) });
+      const hasKnownCatCosts = Boolean(
+        tb?.hasKnownCategoryCosts ||
+        curIdentified.byCategory?.inputCostUSD !== undefined ||
+        curIdentified.byCategory?.cacheCostUSD !== undefined ||
+        curIdentified.byCategory?.outputCostUSD !== undefined
+      );
+      if (tb?.hasKnownCategoryCosts) {
+        if (inVal) inVal.textContent = `$${Number(tb.inputCostUSD || 0).toFixed(2)}`;
+        if (inTok) inTok.textContent = `${fmtYi(tb.input ?? curIn)} tok`;
+        if (caVal) caVal.textContent = `$${Number(tb.cacheCostUSD || 0).toFixed(2)}`;
+        if (caTok) caTok.textContent = t('cost.tokCacheDiscount', { tok: fmtYi(tb.cache ?? curCa) });
+        if (outVal) outVal.textContent = `$${Number(tb.outputCostUSD || 0).toFixed(2)}`;
+        if (outTok) outTok.textContent = `${fmtYi(tb.output ?? curOut)} tok`;
+      } else if (hasKnownCatCosts) {
+        const resInC = Number(rb.inputCostUSD ?? (Number(rb.input || 0) * rateIn / 1e6));
+        const resCaC = Number(rb.cacheCostUSD ?? (Number(rb.cache || 0) * rateCa / 1e6));
+        const resOutC = Number(rb.outputCostUSD ?? (Number(rb.output || 0) * rateOut / 1e6));
+        if (inVal) inVal.textContent = `$${(Number(curIdentified.byCategory?.inputCostUSD || 0) + resInC).toFixed(2)}`;
+        if (inTok) inTok.textContent = `${fmtYi(curIn)} tok`;
+        if (caVal) caVal.textContent = `$${(Number(curIdentified.byCategory?.cacheCostUSD || 0) + resCaC).toFixed(2)}`;
+        if (caTok) caTok.textContent = t('cost.tokCacheDiscount', { tok: fmtYi(curCa) });
+        if (outVal) outVal.textContent = `$${(Number(curIdentified.byCategory?.outputCostUSD || 0) + resOutC).toFixed(2)}`;
+        if (outTok) outTok.textContent = `${fmtYi(curOut)} tok`;
+      } else {
+        if (inVal) inVal.textContent = `$${Number(rb.inputCostUSD ?? (Number(rb.input || 0) * rateIn / 1e6)).toFixed(2)}`;
+        if (inTok) inTok.textContent = knownCost > 0 ? t('cost.tokResidual', { tok: fmtYi(rb.input || 0) }) : `${fmtYi(curIn)} tok`;
+        if (caVal) caVal.textContent = `$${Number(rb.cacheCostUSD ?? (Number(rb.cache || 0) * rateCa / 1e6)).toFixed(2)}`;
+        if (caTok) caTok.textContent = knownCost > 0 ? t('cost.tokResidual', { tok: fmtYi(rb.cache || 0) }) : t('cost.tokCacheDiscount', { tok: fmtYi(curCa) });
+        if (outVal) outVal.textContent = `$${Number(rb.outputCostUSD ?? (Number(rb.output || 0) * rateOut / 1e6)).toFixed(2)}`;
+        if (outTok) outTok.textContent = knownCost > 0 ? t('cost.tokResidual', { tok: fmtYi(rb.output || 0) }) : `${fmtYi(curOut)} tok`;
+      }
     } else {
       // 仅已识别真实模型
       const pricedCount = Number(curIdentified.pricedRequestsCount || 0);
@@ -11172,11 +11458,26 @@ function formatVendorLabel(vendor) {
         pillClass = `key-pill ${pct >= 100 ? 'pill-good' : 'pill-warn'}`;
       }
 
-      if (inVal) inVal.textContent = `$${((curIdentified.byCategory?.inputTokens || 0) * rateIn / 1e6).toFixed(2)}`;
+      const hasActualCatCosts = (
+        curIdentified.byCategory?.inputCostUSD !== undefined ||
+        curIdentified.byCategory?.cacheCostUSD !== undefined ||
+        curIdentified.byCategory?.outputCostUSD !== undefined
+      );
+      const idInCost = hasActualCatCosts
+        ? Number(curIdentified.byCategory?.inputCostUSD || 0)
+        : ((curIdentified.byCategory?.inputTokens || 0) * rateIn / 1e6);
+      const idCaCost = hasActualCatCosts
+        ? Number(curIdentified.byCategory?.cacheCostUSD || 0)
+        : ((curIdentified.byCategory?.cacheTokens || 0) * rateCa / 1e6);
+      const idOutCost = hasActualCatCosts
+        ? Number(curIdentified.byCategory?.outputCostUSD || 0)
+        : ((curIdentified.byCategory?.outputTokens || 0) * rateOut / 1e6);
+
+      if (inVal) inVal.textContent = `$${idInCost.toFixed(2)}`;
       if (inTok) inTok.textContent = `${fmtYi(curIdentified.byCategory?.inputTokens || 0)} tok`;
-      if (caVal) caVal.textContent = `$${((curIdentified.byCategory?.cacheTokens || 0) * rateCa / 1e6).toFixed(2)}`;
+      if (caVal) caVal.textContent = `$${idCaCost.toFixed(2)}`;
       if (caTok) caTok.textContent = `${fmtYi(curIdentified.byCategory?.cacheTokens || 0)} tok`;
-      if (outVal) outVal.textContent = `$${((curIdentified.byCategory?.outputTokens || 0) * rateOut / 1e6).toFixed(2)}`;
+      if (outVal) outVal.textContent = `$${idOutCost.toFixed(2)}`;
       if (outTok) outTok.textContent = `${fmtYi(curIdentified.byCategory?.outputTokens || 0)} tok`;
     }
 
@@ -11191,7 +11492,7 @@ function formatVendorLabel(vendor) {
     const curSymbol = ps.currencySymbol || '$';
     if (subSpendLbl) subSpendLbl.textContent = t('cost.subSpendLabel');
 
-    const extraNoCompare = isPeriod ? '' : t('cost.allNoCompare');
+    const extraNoCompare = isMonthlyWindow ? '' : t('cost.allNoCompare');
     if (subSpendVal && subNote) {
       if (ps.actualPricePaid === 0 || ps.isZeroExtraCost) {
         subSpendVal.textContent = `${curSymbol}0`;
@@ -11215,7 +11516,7 @@ function formatVendorLabel(vendor) {
         subLine.textContent = t('cost.subLineFree', { sym: '$', src: t('plan.tag.manualFree') });
       } else if (ps.actualPricePaid !== null && ps.actualPricePaid !== undefined) {
         const paidNum = Number(ps.actualPricePaid);
-        const ratioSuffix = (isPeriod && paidNum > 0 && apiCost > 0)
+        const ratioSuffix = (isMonthlyWindow && paidNum > 0 && apiCost > 0)
           ? ` · ${(apiCost / paidNum).toFixed(1)}x`
           : '';
         subLine.textContent = t('cost.subLinePaid', {
@@ -11236,7 +11537,7 @@ function formatVendorLabel(vendor) {
     }
     if (diffSummary) {
       let diffTxt = '';
-      if (!isPeriod) {
+      if (!isMonthlyWindow) {
         diffTxt = t('cost.diffAll');
       } else if (ps.actualPricePaid === 0 || ps.isZeroExtraCost) {
         diffTxt = t('cost.diffFree', { val: apiCost.toFixed(2) });
@@ -11250,13 +11551,41 @@ function formatVendorLabel(vendor) {
       diffSummary.hidden = !diffTxt;
     }
 
-    // 5. 详细未计价原因说明
+    // 5. 详细已计价与未收录费率模型说明
     if (breakdown) {
-      const modelKeys = Object.keys(curIdentified.byModel || {});
-      const modelDetails = modelKeys.map(k => `${k}: $${curIdentified.byModel[k].costUSD} (${fmt(curIdentified.byModel[k].tokens)} tok)`).join('; ');
+      const modelKeys = Object.keys(curIdentified.byModel || {})
+        .sort((a, b) => (Number(curIdentified.byModel[b]?.costUSD || 0) - Number(curIdentified.byModel[a]?.costUSD || 0)));
+      const fmtCostShort = (c) => {
+        const n = Number(c || 0);
+        if (n > 0 && n < 0.01) return '<$0.01';
+        return `$${n.toFixed(2)}`;
+      };
+      const modelDetails = modelKeys.map((k) => {
+        const name = COST_MODEL_DISPLAY_NAMES[k] || k;
+        const m = curIdentified.byModel[k];
+        return `${name} ${fmtCostShort(m.costUSD)} (${fmtYi(m.tokens)})`;
+      }).join(' · ');
+
+      let unpricedNote = '';
+      const unpricedMap = curIdentified.unpricedByModel || {};
+      const unpricedEntries = Object.entries(unpricedMap)
+        .filter(([, v]) => Number(v?.tokens || 0) > 0)
+        .sort((a, b) => Number(b[1].tokens || 0) - Number(a[1].tokens || 0));
+      let explainedUnpricedTok = 0;
+      if (unpricedEntries.length > 0) {
+        explainedUnpricedTok = unpricedEntries.reduce((acc, [, v]) => acc + Number(v.tokens || 0), 0);
+        const listStr = unpricedEntries.slice(0, 4).map(([name, v]) => `${name} (${fmtYi(v.tokens)})`).join(' · ');
+        unpricedNote += t('cost.unpricedModelsNote', { models: listStr });
+      }
+      const totalUnpricedTok = Number(curIdentified.unpricedTokens || 0);
+      const legacyUnpricedTok = Math.max(0, totalUnpricedTok - explainedUnpricedTok);
+      if (legacyUnpricedTok > 0) {
+        unpricedNote += t('cost.unpricedLegacyNote', { tok: fmtYi(legacyUnpricedTok) });
+      }
+
       breakdown.textContent = t('cost.breakdownPrefix', {
         details: modelDetails || t('cost.breakdownNone'),
-        note: ''
+        note: unpricedNote
       });
     }
   }
@@ -11609,6 +11938,9 @@ function formatVendorLabel(vendor) {
       ANTIGRAVITY_TOKEN_DATA.dailyMapBySource = normalized.dailyMapBySource;
       ANTIGRAVITY_TOKEN_DATA.dailyModelMap = normalized.dailyModelMap || {};
       ANTIGRAVITY_TOKEN_DATA.dailyModelMapBySource = normalized.dailyModelMapBySource || payload.dailyModelMapBySource || null;
+      ANTIGRAVITY_TOKEN_DATA.dailyCostMap = normalized.dailyCostMap || (activeTokenSource === 'all' ? (payload.dailyCostMap || {}) : {});
+      ANTIGRAVITY_TOKEN_DATA.dailyCostMapBySource = normalized.dailyCostMapBySource || payload.dailyCostMapBySource || null;
+      if (payload.uiPreferences) ANTIGRAVITY_TOKEN_DATA.uiPreferences = payload.uiPreferences;
       ANTIGRAVITY_TOKEN_DATA.modelMetaByKey = normalized.modelMetaByKey || payload.modelMetaByKey || null;
       ANTIGRAVITY_TOKEN_DATA.summary = normalized.summary;
       ANTIGRAVITY_TOKEN_DATA.referenceCost = normalized.referenceCost;
@@ -11642,6 +11974,15 @@ function formatVendorLabel(vendor) {
       } else if (payload.dailyModelMap) {
         ANTIGRAVITY_TOKEN_DATA.dailyModelMap = activeTokenSource === 'all' ? payload.dailyModelMap : {};
       }
+      if (payload.dailyCostMapBySource) {
+        ANTIGRAVITY_TOKEN_DATA.dailyCostMapBySource = payload.dailyCostMapBySource;
+        ANTIGRAVITY_TOKEN_DATA.dailyCostMap = activeTokenSource === 'all'
+          ? (payload.dailyCostMapBySource.all || {})
+          : (payload.dailyCostMapBySource[activeTokenSource] || {});
+      } else if (payload.dailyCostMap) {
+        ANTIGRAVITY_TOKEN_DATA.dailyCostMap = activeTokenSource === 'all' ? payload.dailyCostMap : {};
+      }
+      if (payload.uiPreferences) ANTIGRAVITY_TOKEN_DATA.uiPreferences = payload.uiPreferences;
       if (payload.modelMetaByKey) ANTIGRAVITY_TOKEN_DATA.modelMetaByKey = payload.modelMetaByKey;
       if (payload.updatedAt) ANTIGRAVITY_TOKEN_DATA.updatedAt = payload.updatedAt;
       if (payload.currentPeriod) ANTIGRAVITY_TOKEN_DATA.currentPeriod = payload.currentPeriod;

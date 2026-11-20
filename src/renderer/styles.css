@@ -1383,20 +1383,40 @@
     .cost-top-title-group{display:flex;align-items:center;gap:6px;flex-wrap:wrap;min-width:0}
     .cost-card-title,.cost-card-heading{font-size:12px;font-weight:600;color:var(--ag-text-primary)}
     .cost-meta-pill{font-size:10px;padding:1px 7px;font-variant-numeric:tabular-nums}
-    .cost-scope-actions{display:inline-flex;align-items:center;gap:4px;flex-wrap:wrap}
-    .cost-compact-pill{padding:2px 8px;font-size:11px;border-radius:6px;background:var(--ag-surface-2)}
+    .cost-scope-actions{display:inline-flex;align-items:center;gap:2px}
+    .cost-compact-pill{padding:3px 8px;font-size:11px;border-radius:6px;background:transparent}
     .cost-compact-pill.active{background:var(--ag-surface-tile);box-shadow:var(--ag-tile-shadow)}
 
+    .cost-billing-day-row{
+      display:flex;align-items:center;gap:8px;flex-wrap:wrap;
+      padding:6px 10px;margin-bottom:10px;border-radius:8px;
+      background:var(--ag-surface-tile);box-shadow:var(--ag-tile-shadow);
+      font-size:11px;color:var(--ag-text-secondary);
+    }
+    .cost-billing-day-lbl{font-weight:500;color:var(--ag-text-secondary)}
+    .cost-billing-day-select{
+      font-size:11px;padding:2px 6px;border-radius:5px;
+      background:var(--ag-bg-input);color:var(--ag-text-primary);
+      border:1px solid var(--ag-hairline);outline:none;cursor:pointer;
+      font-variant-numeric:tabular-nums;
+    }
+    .cost-billing-day-select:focus{border-color:var(--ag-token-accent-default,#a78bfa)}
+    .cost-billing-range-txt{margin-left:auto;font-size:11px;color:var(--ag-text-muted);font-variant-numeric:tabular-nums}
+
     .cost-hero-grid{
-      display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap;
+      display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;
       padding-bottom:12px;margin-bottom:11px;border-bottom:1px solid var(--ag-hairline);
     }
+    .cost-hero-left{display:flex;flex-direction:column;gap:3px;min-width:0}
+    .cost-grand-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
     .cost-grand-val{
-      font-size:24px;font-weight:700;letter-spacing:-0.03em;line-height:1.12;
+      font-size:26px;font-weight:700;letter-spacing:-0.03em;line-height:1.1;
       color:var(--ag-text-primary);font-variant-numeric:tabular-nums;
     }
-    .cost-scope-desc{font-size:11px;color:var(--ag-text-muted);margin-top:3px;font-variant-numeric:tabular-nums}
-    .cost-grand-sub{font-size:11px;color:var(--ag-text-secondary);text-align:right;line-height:1.45;font-variant-numeric:tabular-nums}
+    .cost-scope-desc{font-size:11px;color:var(--ag-text-muted);font-variant-numeric:tabular-nums}
+    .cost-hero-right{display:flex;flex-direction:column;align-items:flex-end;gap:5px;min-width:0}
+    .cost-mode-switch{display:inline-flex;align-items:center;gap:2px}
+    .cost-grand-sub{font-size:11px;color:var(--ag-text-secondary);text-align:right;line-height:1.35;font-variant-numeric:tabular-nums}
 
     .cost-mode-row{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:9px}
     .cost-mode-lbl{font-size:11px;font-weight:500;color:var(--ag-text-secondary)}

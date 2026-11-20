@@ -802,36 +802,44 @@
             <span id="cost-non-paid-badge" class="key-pill pill-muted cost-meta-pill"
               data-i18n="cost.nonPaidBadge">参考估值</span>
           </div>
-          <div class="cost-scope-actions">
+          <div class="source-switch-bar cost-scope-actions">
             <button id="cost-btn-scope-period" class="switch-pill-btn cost-compact-pill active" type="button"
-              data-i18n="cost.scopePeriod">本期</button>
+              data-i18n="cost.scopePeriod">自然月</button>
+            <button id="cost-btn-scope-cycle" class="switch-pill-btn cost-compact-pill" type="button"
+              data-i18n="cost.scopeCycle">订阅周期</button>
             <button id="cost-btn-scope-all" class="switch-pill-btn cost-compact-pill" type="button"
-              data-i18n="cost.scopeAll">全量历史</button>
-            <span id="cost-coverage-pill" class="key-pill pill-muted cost-meta-pill">100%</span>
+              data-i18n="cost.scopeAll">全量</button>
           </div>
+        </div>
+
+        <div id="cost-billing-day-row" class="cost-billing-day-row" style="display:none">
+          <label for="cost-billing-day-select" class="cost-billing-day-lbl" data-i18n="cost.billingDayLabel">账单日</label>
+          <select id="cost-billing-day-select" class="cost-billing-day-select"></select>
+          <span id="cost-billing-range-txt" class="cost-billing-range-txt">—</span>
         </div>
 
         <div class="cost-hero-grid">
-          <div>
-            <div id="cost-grand-val" class="cost-grand-val">$0.00</div>
+          <div class="cost-hero-left">
+            <div class="cost-grand-row">
+              <div id="cost-grand-val" class="cost-grand-val">$0.00</div>
+              <span id="cost-coverage-pill" class="key-pill pill-muted cost-meta-pill">100%</span>
+            </div>
             <div id="cost-scope-desc" class="cost-scope-desc">—</div>
           </div>
-          <div id="cost-grand-sub" class="cost-grand-sub">—</div>
+          <div class="cost-hero-right">
+            <div class="source-switch-bar cost-mode-switch">
+              <button id="cost-btn-mode-hybrid" class="switch-pill-btn cost-compact-pill active" type="button"
+                data-i18n="cost.modeHybrid">混合</button>
+              <button id="cost-btn-mode-identified" class="switch-pill-btn cost-compact-pill" type="button"
+                data-i18n="cost.modeIdentified">仅已识别</button>
+              <button id="cost-btn-mode-ref" class="switch-pill-btn cost-compact-pill" type="button"
+                data-i18n="cost.modeRef">参考价</button>
+            </div>
+            <div id="cost-grand-sub" class="cost-grand-sub">—</div>
+          </div>
         </div>
 
         <div id="cost-details-pane">
-          <div class="cost-mode-row">
-            <span class="cost-mode-lbl" data-i18n="cost.modeLabel">估值模式:</span>
-            <div class="source-switch-bar">
-              <button id="cost-btn-mode-ref" class="switch-pill-btn cost-compact-pill active" type="button"
-                data-i18n="cost.modeRef">参考模型估算</button>
-              <button id="cost-btn-mode-hybrid" class="switch-pill-btn cost-compact-pill" type="button"
-                data-i18n="cost.modeHybrid">混合模式</button>
-              <button id="cost-btn-mode-identified" class="switch-pill-btn cost-compact-pill" type="button"
-                data-i18n="cost.modeIdentified">仅已识别模型</button>
-            </div>
-          </div>
-
           <div class="cost-summary-strip">
             <span id="cost-usage-summary" class="cost-usage-summary cost-usage-summary-txt">—</span>
             <span id="cost-diff-summary" class="cost-diff-summary cost-diff-summary-txt">—</span>
@@ -839,17 +847,17 @@
 
           <div id="ref-cost-breakdown-cards" class="ref-cost-grid">
             <div class="t-card ref-cost-card ref-cost-subcard">
-              <div class="ref-cost-lbl"><span data-i18n="cost.card.input">输入 Token</span> ($0.75/M)</div>
+              <div class="ref-cost-lbl"><span data-i18n="cost.card.input">输入 Token</span><span id="ref-cost-input-rate" style="display:none"> ($0.75/M)</span></div>
               <div id="ref-cost-input-val" class="ref-cost-val">$0.00</div>
               <div id="ref-cost-input-tok" class="ref-cost-tok">0 tok</div>
             </div>
             <div class="t-card ref-cost-card ref-cost-subcard">
-              <div class="ref-cost-lbl"><span data-i18n="cost.card.cache">缓存读取 (优惠)</span> ($0.075/M)</div>
+              <div class="ref-cost-lbl"><span data-i18n="cost.card.cache">缓存读取</span><span id="ref-cost-cache-rate" style="display:none"> ($0.075/M)</span></div>
               <div id="ref-cost-cache-val" class="ref-cost-val">$0.00</div>
               <div id="ref-cost-cache-tok" class="ref-cost-tok">0 tok</div>
             </div>
             <div class="t-card ref-cost-card ref-cost-subcard">
-              <div class="ref-cost-lbl"><span data-i18n="cost.card.output">输出 Token</span> ($3.75/M)</div>
+              <div class="ref-cost-lbl"><span data-i18n="cost.card.output">输出 Token</span><span id="ref-cost-output-rate" style="display:none"> ($3.75/M)</span></div>
               <div id="ref-cost-output-val" class="ref-cost-val">$0.00</div>
               <div id="ref-cost-output-tok" class="ref-cost-tok">0 tok</div>
             </div>
