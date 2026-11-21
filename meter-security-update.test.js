@@ -1237,3 +1237,78 @@ test('离线契约：IPC 与 live-host 均不再暴露 check-update、apply-upda
     assert.equal(statusCode, 403, `已删除的在线更新路由 ${forbiddenRoute} 必须返回 403`);
   }
 });
+
+test('宿主兼容：Antigravity v2.34+ 使用 loadHubWindowUrl(win, url, ...) 锚点可正常安装、重复安装与原位还原', async () => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ag-test-v234-hub-loader-'));
+  const prevStateDir = process.env.AG_METER_STATE_DIR;
+  process.env.AG_METER_STATE_DIR = path.join(tmpDir, 'state');
+
+  try {
+    const targetAsar = path.join(tmpDir, 'app.asar');
+    const v234Utils = `"use strict";
+async function loadHubWindowUrl(win, targetUrl, options) {
+    await win.loadURL(targetUrl);
+}
+function setupNodeWrapper(env) {}
+function createWindow(url, storageManager, options) {
+    const win = {};
+    const skipBootstrapMint = Boolean(options?.partition || options?.navigationPolicy);
+    void loadHubWindowUrl(win, url, { skipBootstrapMint });
+    return win;
+}
+`;
+    const host = await createMockHostAsar(tmpDir, '2.34.0', v234Utils);
+    fs.copyFileSync(host, targetAsar);
+
+    const { TAGS, validateSyntax } = require('./modular-installer');
+    await install({ path: targetAsar });
+    const u1 = builtinAsar.extractFile(targetAsar, 'dist/utils.js').toString('utf8');
+    assert.ok(u1.includes(TAGS.METER_UTILS_START), 'v2.34+ 应成功注入 METER_UTILS_START 标记');
+    assert.ok(u1.includes('    void loadHubWindowUrl(win, url, { skipBootstrapMint });'), '原有 loadHubWindowUrl 调用必须完整保留');
+    assert.ok(validateSyntax(u1, 'dist/utils.js'));
+
+    // 重复安装应通过原位清洗自证
+    await install({ path: targetAsar });
+    const u2 = builtinAsar.extractFile(targetAsar, 'dist/utils.js').toString('utf8');
+    assert.equal(u2.split(TAGS.METER_UTILS_START).length, 2, '重复安装不得产生重复注入块');
+    assert.ok(validateSyntax(u2, 'dist/utils.js'));
+
+    // 原位卸载应完整清理
+    await restore({ path: targetAsar, inPlace: true });
+    const u3 = builtinAsar.extractFile(targetAsar, 'dist/utils.js').toString('utf8');
+    assert.equal(u3.includes(TAGS.METER_UTILS_START), false, '原位还原后不应残留注入标记');
+    assert.ok(u3.includes('    void loadHubWindowUrl(win, url, { skipBootstrapMint });'));
+    assert.ok(validateSyntax(u3, 'dist/utils.js'));
+  } finally {
+    if (prevStateDir !== undefined) process.env.AG_METER_STATE_DIR = prevStateDir;
+    else delete process.env.AG_METER_STATE_DIR;
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
+});
+
+test('宿主兼容：Antigravity v2.34+ 启用 authBootstrap 后 local-api 优先读取同 origin 的主进程内存 CSRF Token', async () => {
+  const { resolveHostAuthBootstrapToken, connect } = require('./local-api');
+
+  const mockAuthBootstrap = {
+    getActiveLsBaseUrl: () => 'https://127.0.0.1:54321',
+    getActiveLsCsrfToken: () => 'host-admin-csrf-token-v234'
+  };
+
+  assert.equal(
+    resolveHostAuthBootstrapToken('https://127.0.0.1:54321', mockAuthBootstrap),
+    'host-admin-csrf-token-v234',
+    '匹配当前 active LS origin 时应返回内存 CSRF Token'
+  );
+  assert.equal(
+    resolveHostAuthBootstrapToken('https://127.0.0.1:59999', mockAuthBootstrap),
+    null,
+    '不同端口 origin 绝不能复用错误实例的 CSRF Token'
+  );
+
+  const api = await connect({
+    origin: 'https://127.0.0.1:54321',
+    authBootstrap: mockAuthBootstrap
+  });
+  assert.equal(api.origin, 'https://127.0.0.1:54321');
+  assert.equal(typeof api.call, 'function');
+});

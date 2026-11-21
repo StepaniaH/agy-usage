@@ -19,6 +19,7 @@ const {
   generateMeterPreloadCode,
   cleanUtilsSource,
   cleanPreloadSource,
+  findWindowLoadMarker,
   verifyCleanStructure
 } = require('./modular-installer');
 
@@ -531,8 +532,12 @@ async function install(options = {}) {
       // 6. 注入只读 Context Meter 组件
       if (modulesConfig.modules.meter.enabled) {
         const meterUtils = generateMeterUtilsCode();
+        const windowLoadMarker = findWindowLoadMarker(finalUtils);
+        if (!windowLoadMarker) {
+          throw new Error('未在 dist/utils.js 中定位到唯一的窗口加载锚点，中止写入以保护宿主环境。');
+        }
         finalUtils = finalUtils
-          .replace('    void win.loadURL(url);', `${meterUtils.windowLoadHook}    void win.loadURL(url);`);
+          .replace(windowLoadMarker, `${meterUtils.windowLoadHook}${windowLoadMarker}`);
 
         const createWinSig = 'function createWindow(url, storageManager, options) {';
         if (finalUtils.includes(createWinSig) && !finalUtils.includes('__agDefaultStorageManager')) {

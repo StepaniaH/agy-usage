@@ -556,6 +556,32 @@ async function extractAppConfigViaCdp(page) {
 }
 
 /**
+ * 当运行于 Antigravity Electron 主进程（dist/）内时，从宿主 authBootstrap 模块读取当前
+ * Language Server 的内存 CSRF Token（兼容 v2.34+ 启用 authenticated UI bootstrap 后
+ * 未鉴权 GET / 不再下发 window.__APP_CONFIG__.csrfToken 的场景）。
+ */
+function resolveHostAuthBootstrapToken(expectedOrigin, authBootstrapOverride = null) {
+  try {
+    const authBootstrap = authBootstrapOverride || require('./authBootstrap');
+    if (!authBootstrap || typeof authBootstrap.getActiveLsCsrfToken !== 'function') return null;
+    const token = String(authBootstrap.getActiveLsCsrfToken() || '').trim();
+    if (!token) return null;
+    if (typeof authBootstrap.getActiveLsBaseUrl === 'function') {
+      const activeBase = authBootstrap.getActiveLsBaseUrl();
+      if (activeBase) {
+        const activeOrigin = normalizeLoopbackOrigin(activeBase);
+        if (activeOrigin && expectedOrigin && activeOrigin !== expectedOrigin) {
+          return null;
+        }
+      }
+    }
+    return token;
+  } catch {
+    return null;
+  }
+}
+
+/**
  * 解析并缓存或实时提取指定本地页面原点的 CSRF Token 并构造 RPC 客户端。
  */
 async function connectOrigin(rawOrigin, page = null, origins = null, extraMeta = {}) {
@@ -564,23 +590,39 @@ async function connectOrigin(rawOrigin, page = null, origins = null, extraMeta =
     throw new Error('非法的本机回环页面地址');
   }
   let hasConfig = false;
-  let token = null;
-  try {
-    const html = await request(origin + '/');
-    const config = html.match(/window\.__APP_CONFIG__\s*=\s*(\{.*?\})\s*;/s);
-    if (config) {
-      hasConfig = true;
-      token = JSON.parse(config[1]).csrfToken;
-    }
-  } catch (err) {
-    if (!page || !page.webSocketDebuggerUrl) throw err;
+  let token = typeof extraMeta?.csrfToken === 'string' && extraMeta.csrfToken.trim()
+    ? extraMeta.csrfToken.trim()
+    : null;
+  if (token) {
+    hasConfig = true;
   }
 
-  if (!hasConfig && page && page.webSocketDebuggerUrl) {
+  if (!token) {
+    const hostToken = resolveHostAuthBootstrapToken(origin, extraMeta?.authBootstrap || null);
+    if (hostToken) {
+      hasConfig = true;
+      token = hostToken;
+    }
+  }
+
+  if (!token) {
+    try {
+      const html = await request(origin + '/');
+      const config = html.match(/window\.__APP_CONFIG__\s*=\s*(\{.*?\})\s*;/s);
+      if (config) {
+        hasConfig = true;
+        token = JSON.parse(config[1]).csrfToken;
+      }
+    } catch (err) {
+      if (!page || !page.webSocketDebuggerUrl) throw err;
+    }
+  }
+
+  if ((!hasConfig || !token) && page && page.webSocketDebuggerUrl) {
     const cdpCfg = await extractAppConfigViaCdp(page);
     if (cdpCfg && cdpCfg.hasConfig) {
       hasConfig = true;
-      token = cdpCfg.csrfToken;
+      if (cdpCfg.csrfToken) token = cdpCfg.csrfToken;
     }
   }
 
@@ -619,19 +661,28 @@ async function connect(options = {}) {
     if (!explicitOrigin) {
       throw new Error('非法的本机回环页面地址');
     }
-    return connectOrigin(explicitOrigin, null, [explicitOrigin]);
+    return connectOrigin(explicitOrigin, null, [explicitOrigin], {
+      ...(options.csrfToken ? { csrfToken: options.csrfToken } : {}),
+      ...(options.authBootstrap ? { authBootstrap: options.authBootstrap } : {})
+    });
   }
   const { port, page, pages } = await discoverAntigravityCdp(options);
   const origins = Array.from(
     new Set((Array.isArray(pages) ? pages : [page]).map(item => normalizeLoopbackOrigin(item?.url)).filter(Boolean))
   );
   const targetOrigin = normalizeLoopbackOrigin(page.url);
-  return connectOrigin(targetOrigin, page, origins, { port, pages });
+  return connectOrigin(targetOrigin, page, origins, {
+    port,
+    pages,
+    ...(options?.csrfToken ? { csrfToken: options.csrfToken } : {}),
+    ...(options?.authBootstrap ? { authBootstrap: options.authBootstrap } : {})
+  });
 }
 
 module.exports = {
   connect,
   connectOrigin,
+  resolveHostAuthBootstrapToken,
   normalizeLoopbackOrigin,
   getAppDataDir,
   getDevToolsActivePort,
