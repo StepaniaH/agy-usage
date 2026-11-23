@@ -22,6 +22,7 @@
   const ctxCardTierCapsEl = el('ctx-card-tier-caps');
 
   let activeSessionModelKey = null;
+  let activeSessionModelLabel = null;
   let activeSessionProductKey = null;
   let activeSessionEffort = null;
   let activeSessionModelConfirmed = false;
@@ -125,28 +126,133 @@
     return str || null;
   }
 
+  const TRIGGER_EFFORT_CASE_MAP = {
+    'extra high': 'Extra High',
+    xhigh: 'XHigh',
+    low: 'Low',
+    medium: 'Medium',
+    high: 'High',
+    extra: 'Extra',
+    minimal: 'Minimal',
+    max: 'Max'
+  };
+
+  function parseTriggerLabelParts(text, explicitEffort = null) {
+    const clean = String(text || '').replace(/\s+/g, ' ').trim();
+    let effort = explicitEffort || null;
+    let baseText = clean;
+    const mParen = clean.match(/^(.*?)\s*\((Extra High|XHigh|Low|Medium|High|Extra|Minimal|Max)\)\s*$/i);
+    if (mParen) {
+      baseText = mParen[1].trim() || clean;
+      if (!effort) effort = mParen[2];
+    } else {
+      const mTrail = clean.match(/^(.*?)\s+(Extra High|XHigh|Low|Medium|High|Minimal|Max)\s*$/i);
+      if (mTrail) {
+        baseText = mTrail[1].trim() || clean;
+        if (!effort) effort = mTrail[2];
+      }
+    }
+    const normEffort = effort
+      ? (TRIGGER_EFFORT_CASE_MAP[String(effort).trim().toLowerCase()] || String(effort).trim())
+      : null;
+    const parenLabel = (normEffort && baseText && !baseText.includes('('))
+      ? `${baseText} (${normEffort})`
+      : clean;
+    return { clean, baseText, normEffort, parenLabel };
+  }
+
+  function getEffortAliasList(normEffort) {
+    if (!normEffort) return [];
+    const low = String(normEffort).trim().toLowerCase();
+    if (low === 'extra high') return ['Extra High', 'XHigh'];
+    if (low === 'xhigh' || low === 'x high') return ['XHigh', 'Extra High'];
+    return [normEffort];
+  }
+
+  function effortsEquivalent(a, b) {
+    if (!a || !b) return false;
+    const na = String(a).trim().toLowerCase().replace(/[\s_-]+/g, '');
+    const nb = String(b).trim().toLowerCase().replace(/[\s_-]+/g, '');
+    if (na === nb) return true;
+    const isExtraA = na === 'extrahigh' || na === 'xhigh';
+    const isExtraB = nb === 'extrahigh' || nb === 'xhigh';
+    return isExtraA && isExtraB;
+  }
+
+  function findConfigMatchForTrigger(text, explicitEffort, configs) {
+    if (!text || !Array.isArray(configs) || !configs.length) return null;
+    const parts = parseTriggerLabelParts(text, explicitEffort);
+    const aliasParenLabels = parts.normEffort && parts.baseText && !parts.baseText.includes('(')
+      ? getEffortAliasList(parts.normEffort).map(ef => `${parts.baseText} (${ef})`)
+      : [];
+    const exactCandidates = [];
+    for (const c of [parts.parenLabel, ...aliasParenLabels, parts.clean, parts.baseText]) {
+      if (typeof c === 'string' && c.trim() && !exactCandidates.includes(c.trim())) {
+        exactCandidates.push(c.trim());
+      }
+    }
+    const stripPref = v => String(v || '').trim().toLowerCase().replace(/^model_/, '');
+    const pickBest = (list) => list.find(c => !c.isHistorical) || list[0] || null;
+
+    // 1. 精确匹配配置项 label / modelId / modelOrAlias.model
+    for (const cand of exactCandidates) {
+      const cLower = cand.toLowerCase();
+      const cStripped = stripPref(cLower);
+      const hits = configs.filter(c => {
+        if (!c || typeof c !== 'object') return false;
+        const fields = [c.label, c.modelId, c.modelOrAlias?.model]
+          .filter(v => typeof v === 'string' && v.trim())
+          .map(v => v.trim().toLowerCase());
+        return fields.some(f => f === cLower || stripPref(f) === cStripped);
+      });
+      if (hits.length) {
+        const matchedCfg = pickBest(hits);
+        const stableId = resolveStableModelKeyClient(matchedCfg) || matchedCfg.modelId || matchedCfg.modelOrAlias?.model || parts.parenLabel;
+        const g = groupProductSafe({
+          modelId: stableId,
+          label: matchedCfg.label || parts.parenLabel,
+          modelOrAlias: matchedCfg.modelOrAlias,
+          effort: matchedCfg.effort || parts.normEffort
+        });
+        return { matchedCfg, stableId, g, effort: parts.normEffort || g.effort || null };
+      }
+    }
+
+    // 2. 标准化产品名匹配（兼容 Extra High / XHigh 与跨档位名称差异）
+    const normLookup = typeof normalizeModelLookupName === 'function'
+      ? normalizeModelLookupName
+      : (s => String(s || '').toLowerCase().replace(/\([^)]*\)/g, ' ').replace(/\b(low|medium|high|xhigh|extra\s*high)\b/gi, ' ').replace(/[^a-z0-9.\u4e00-\u9fa5]+/g, ' ').replace(/\s+/g, ' ').trim());
+    const targetNorm = normLookup(parts.baseText || parts.clean);
+    if (targetNorm) {
+      const normHits = configs.filter(c => c && typeof c === 'object' && normLookup(c.label) === targetNorm);
+      if (normHits.length) {
+        let matchedCfg = null;
+        if (parts.normEffort) {
+          const effortMatches = normHits.filter(c => {
+            const cg = groupProductSafe({ modelId: c.modelId, label: c.label, effort: c.effort });
+            return effortsEquivalent(cg.effort || c.effort, parts.normEffort);
+          });
+          if (effortMatches.length) matchedCfg = pickBest(effortMatches);
+        }
+        if (!matchedCfg) matchedCfg = pickBest(normHits);
+        const stableId = resolveStableModelKeyClient(matchedCfg) || matchedCfg.modelId || matchedCfg.modelOrAlias?.model || parts.parenLabel;
+        const g = groupProductSafe({
+          modelId: stableId,
+          label: matchedCfg.label || parts.parenLabel,
+          modelOrAlias: matchedCfg.modelOrAlias,
+          effort: matchedCfg.effort || parts.normEffort
+        });
+        return { matchedCfg, stableId, g, effort: parts.normEffort || g.effort || null };
+      }
+    }
+    return null;
+  }
+
   /**
    * 仅从宿主真实输入框选择器只读读取当前选中模型（严格排除插件自身 #ag-context-meter DOM，零请求拦截）
    */
   function extractHostSelectedModel() {
-    if (typeof document === 'undefined') return null;
-    const triggers = typeof document.querySelectorAll === 'function'
-      ? Array.from(document.querySelectorAll('[data-testid="model-selector-trigger"]'))
-      : (typeof document.querySelector === 'function' ? [document.querySelector('[data-testid="model-selector-trigger"]')].filter(Boolean) : []);
-    if (!triggers.length) return null;
-
-    let trigger = null;
-    for (const candidate of triggers) {
-      if (!candidate) continue;
-      if (host && typeof host.contains === 'function' && host.contains(candidate)) continue;
-      if (typeof candidate.closest === 'function' && candidate.closest('#ag-context-meter')) continue;
-      if (typeof candidate.getBoundingClientRect === 'function') {
-        const rect = candidate.getBoundingClientRect();
-        if (rect && rect.width === 0 && rect.height === 0) continue;
-      }
-      trigger = candidate;
-      break;
-    }
+    const trigger = typeof findVisibleHostModelTrigger === 'function' ? findVisibleHostModelTrigger() : null;
     if (!trigger) return null;
 
     let effort = null;
@@ -159,51 +265,78 @@
     const clone = trigger.cloneNode ? trigger.cloneNode(true) : trigger;
     const svgs = clone.querySelectorAll ? clone.querySelectorAll('svg, [aria-hidden="true"]') : [];
     if (svgs && svgs.forEach) svgs.forEach(s => s.remove());
-    const rawText = (clone.textContent || '').trim();
+    const rawText = (clone.textContent || '').replace(/\s+/g, ' ').trim();
     if (!rawText) return null;
 
-    const effortCaseMap = {
-      'extra high': 'Extra High',
-      xhigh: 'XHigh',
-      low: 'Low',
-      medium: 'Medium',
-      high: 'High',
-      extra: 'Extra',
-      minimal: 'Minimal',
-      max: 'Max'
-    };
-    let baseText = rawText;
-    const mParen = rawText.match(/^(.*?)\s*\((Extra High|XHigh|Low|Medium|High|Extra|Minimal|Max)\)\s*$/i);
-    if (mParen) {
-      baseText = mParen[1].trim() || rawText;
-      if (!effort) effort = mParen[2];
-    } else {
-      const mTrail = rawText.match(/^(.*?)\s+(Extra High|XHigh|Low|Medium|High|Minimal|Max)\s*$/i);
-      if (mTrail) {
-        baseText = mTrail[1].trim() || rawText;
-        if (!effort) effort = mTrail[2];
+    const configs = state.cascadeModelConfigs || state.scan?.cascadeModelConfigs || [];
+    let candidateRawText = rawText;
+    if (/^orchestrator(?:\s*mode)?$/i.test(candidateRawText)) {
+      const aria = String(trigger.getAttribute?.('aria-label') || '').trim();
+      const ariaMatch = aria.match(/(?:current|selected|model)\s*[:：]\s*(.+)$/i);
+      const fromAria = ariaMatch ? ariaMatch[1].replace(/\s+/g, ' ').trim() : '';
+      if (fromAria && !/^orchestrator(?:\s*mode)?$/i.test(fromAria)) {
+        candidateRawText = fromAria;
+      } else if (!findConfigMatchForTrigger(candidateRawText, effort, configs)) {
+        return null;
       }
     }
-    const normEffort = effort ? (effortCaseMap[String(effort).trim().toLowerCase()] || effort) : null;
-    const parenLabel = (normEffort && baseText && !baseText.includes('(')) ? `${baseText} (${normEffort})` : rawText;
 
-    const configs = state.cascadeModelConfigs || state.scan?.cascadeModelConfigs || [];
-    const resolveCand = (cand) => cand
-      ? (resolveStableModelKeyClient(cand) || (typeof resolveStableModelId === 'function' ? resolveStableModelId(cand, configs) : null))
+    // Step A: 先按原始文本尝试匹配实际目录配置（保留显式 Orchestrator (Argon) 等条目）
+    const directMatch = findConfigMatchForTrigger(candidateRawText, effort, configs);
+    const unwrappedText = typeof stripOrchestratorModelWrapper === 'function'
+      ? stripOrchestratorModelWrapper(candidateRawText)
       : null;
-    const stableId = resolveCand(parenLabel) || resolveCand(rawText) || resolveCand(baseText);
+    if (directMatch) {
+      return {
+        rawText: candidateRawText,
+        modelId: directMatch.stableId,
+        productKey: directMatch.g.productKey,
+        productLabel: directMatch.g.productLabel || candidateRawText,
+        effort: directMatch.effort || null,
+        isOrchestratorMode: Boolean(unwrappedText),
+        source: 'dom_trigger'
+      };
+    }
+
+    // Step B: 若原始文本带有 Orchestrator 模式前缀/壳，剥离后再匹配内部真实模型配置
+    const unwrappedMatch = unwrappedText ? findConfigMatchForTrigger(unwrappedText, effort, configs) : null;
+    if (unwrappedMatch) {
+      return {
+        rawText: candidateRawText,
+        modelId: unwrappedMatch.stableId,
+        productKey: unwrappedMatch.g.productKey,
+        productLabel: unwrappedMatch.g.productLabel || unwrappedText,
+        effort: unwrappedMatch.effort || null,
+        isOrchestratorMode: true,
+        source: 'dom_trigger'
+      };
+    }
+
+    // Step C: 冷启动或无目录匹配时的安全兜底
+    const isParenOrch = /^orchestrator(?:\s*mode)?\s*\(/i.test(candidateRawText);
+    const hasKnownVendorUnwrapped = Boolean(
+      unwrappedText && typeof detectModelVendor === 'function' && detectModelVendor(unwrappedText, unwrappedText) !== '其他'
+    );
+    const effectiveText = (unwrappedText && (!isParenOrch || hasKnownVendorUnwrapped))
+      ? unwrappedText
+      : candidateRawText;
+    const parts = parseTriggerLabelParts(effectiveText, effort);
+    const stableId = resolveStableModelKeyClient(parts.parenLabel)
+      || resolveStableModelKeyClient(parts.clean)
+      || resolveStableModelKeyClient(parts.baseText);
     const g = groupProductSafe({
-      modelId: stableId || parenLabel,
-      label: parenLabel,
-      effort: normEffort
+      modelId: stableId || parts.parenLabel,
+      label: parts.parenLabel,
+      effort: parts.normEffort
     });
 
     return {
-      rawText,
-      modelId: stableId || parenLabel,
+      rawText: candidateRawText,
+      modelId: stableId || parts.parenLabel,
       productKey: g.productKey,
-      productLabel: g.productLabel || baseText,
-      effort: normEffort || g.effort || null,
+      productLabel: g.productLabel || parts.baseText,
+      effort: parts.normEffort || g.effort || null,
+      isOrchestratorMode: Boolean(unwrappedText),
       source: 'dom_trigger'
     };
   }
@@ -565,15 +698,25 @@
         if (matchedPool) break;
       }
 
-      // 2. 次级按共享额度池键归并当前账号目录内的模型
-      if (!matchedPool && core?.getSharedQuotaGroupKey) {
+      // 2. 次级通过共享额度匹配器或共享额度池键归并当前账号目录内的模型
+      if (!matchedPool) {
         const probeInput = {
           modelId: membersList[0]?.modelId || product.productKey,
-          label: product.productLabel || membersList[0]?.label || ''
+          label: product.productLabel || membersList[0]?.label || '',
+          productKey: product.productKey || ''
         };
-        const gKey = core.getSharedQuotaGroupKey(probeInput);
-        if (gKey) {
-          matchedPool = pools.find(p => p.poolKey === gKey) || null;
+        if (core?.matchModelQuotaTarget) {
+          const hit = core.matchModelQuotaTarget(pools, probeInput);
+          if (hit?.pool) {
+            matchedPool = hit.pool;
+            matchedModel = hit.model;
+          }
+        }
+        if (!matchedPool && core?.getSharedQuotaGroupKey) {
+          const gKey = core.getSharedQuotaGroupKey(probeInput);
+          if (gKey) {
+            matchedPool = pools.find(p => p.poolKey === gKey) || null;
+          }
         }
       }
     }
@@ -1228,6 +1371,7 @@
   function syncContextModelSelectionFromState() {
     const hostSelected = extractHostSelectedModel();
     let exactId = null;
+    let detectedLabel = null;
     let detectedProduct = null;
     let detectedEffort = null;
     let isConfirmed = false;
@@ -1235,6 +1379,7 @@
 
     if (hostSelected && hostSelected.productKey) {
       exactId = hostSelected.modelId;
+      detectedLabel = hostSelected.productLabel || hostSelected.rawText || null;
       detectedProduct = hostSelected.productKey;
       detectedEffort = hostSelected.effort;
       isConfirmed = true;
@@ -1242,35 +1387,63 @@
       const candidateId = resolveStableModelKeyClient(state.latest);
       if (candidateId) {
         const configs = state.cascadeModelConfigs || state.scan?.cascadeModelConfigs || [];
-        const matchedCfg = Array.isArray(configs) && configs.length > 0
+        let matchedCfg = Array.isArray(configs) && configs.length > 0
           ? configs.find(c => (resolveStableModelKeyClient(c) || c.modelId) === candidateId)
           : null;
+        let unwrappedLatest = null;
+        if (!matchedCfg && Array.isArray(configs) && configs.length > 0 && typeof stripOrchestratorModelWrapper === 'function') {
+          for (const rawField of [state.latest?.model, state.latest?.modelId, candidateId]) {
+            const u = stripOrchestratorModelWrapper(rawField);
+            if (!u) continue;
+            const hit = findConfigMatchForTrigger(u, state.latest?.effort || null, configs);
+            if (hit?.matchedCfg) {
+              matchedCfg = hit.matchedCfg;
+              unwrappedLatest = hit;
+              break;
+            }
+          }
+        }
         const isAllowedInCatalog = Array.isArray(configs) && configs.length > 0
           ? Boolean(matchedCfg && !matchedCfg.isHistorical)
           : true;
         if (isAllowedInCatalog) {
-          const g = groupProductSafe({
-            modelId: candidateId,
-            label: state.latest?.model || candidateId,
-            modelOrAlias: state.latest?.modelOrAlias,
-            effort: state.latest?.effort
-          });
-          exactId = candidateId;
-          detectedProduct = g.productKey;
-          detectedEffort = g.effort || state.latest?.effort || null;
-          isConfirmed = true;
+          if (unwrappedLatest) {
+            exactId = unwrappedLatest.stableId;
+            detectedLabel = unwrappedLatest.g.productLabel || matchedCfg?.label || null;
+            detectedProduct = unwrappedLatest.g.productKey;
+            detectedEffort = unwrappedLatest.effort || state.latest?.effort || null;
+            isConfirmed = true;
+          } else {
+            const rawLbl = state.latest?.model || candidateId;
+            const unwrappedLbl = typeof stripOrchestratorModelWrapper === 'function'
+              ? stripOrchestratorModelWrapper(rawLbl)
+              : null;
+            const g = groupProductSafe({
+              modelId: matchedCfg ? (resolveStableModelKeyClient(matchedCfg) || matchedCfg.modelId || candidateId) : candidateId,
+              label: matchedCfg?.label || unwrappedLbl || rawLbl,
+              modelOrAlias: matchedCfg?.modelOrAlias || state.latest?.modelOrAlias,
+              effort: matchedCfg?.effort || state.latest?.effort
+            });
+            exactId = candidateId;
+            detectedLabel = g.productLabel || unwrappedLbl || state.latest?.model || null;
+            detectedProduct = g.productKey;
+            detectedEffort = g.effort || state.latest?.effort || null;
+            isConfirmed = true;
+          }
         }
       }
     }
 
     if (isConfirmed && exactId && detectedProduct) {
       activeSessionModelKey = exactId;
+      activeSessionModelLabel = detectedLabel;
       activeSessionProductKey = detectedProduct;
       activeSessionEffort = detectedEffort;
       activeSessionModelConfirmed = true;
     } else {
       activeSessionModelConfirmed = false;
       activeSessionModelKey = null;
+      activeSessionModelLabel = null;
       activeSessionProductKey = null;
       activeSessionEffort = null;
     }

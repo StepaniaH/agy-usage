@@ -109,7 +109,10 @@
     resolveEffectivePlanStatus,
     selectPrimaryQuotaBucket,
     splitModelDisplayAndEffort,
-    resolvePlaceholderModelInfo
+    resolvePlaceholderModelInfo,
+    stripOrchestratorModelWrapper,
+    normalizeModelLookupName,
+    matchModelQuotaTarget
   } = (globalThis.__AGContextMeterCore || {});
   const host = document.createElement('div');
   host.id = 'ag-context-meter';

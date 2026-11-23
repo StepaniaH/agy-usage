@@ -382,6 +382,7 @@
     const hostSelected = extractHostSelectedModel();
     if (hostSelected && hostSelected.productKey) {
       activeSessionModelKey = hostSelected.modelId;
+      activeSessionModelLabel = hostSelected.productLabel || hostSelected.rawText || null;
       activeSessionProductKey = hostSelected.productKey;
       activeSessionEffort = hostSelected.effort;
       activeSessionModelConfirmed = true;
@@ -391,6 +392,7 @@
         activeSessionModelConfirmed = false;
         activeSessionProductKey = null;
         activeSessionModelKey = null;
+        activeSessionModelLabel = null;
       }
     }
     if (!activeSessionModelConfirmed || !activeSessionProductKey) return;

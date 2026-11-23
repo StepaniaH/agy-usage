@@ -27,6 +27,9 @@
       : String(raw);
     const s = String(text || '').toLowerCase().trim();
     if (!s) return 'unknown';
+    if (s.includes('neon') || s.includes('gemini-4-neon')) {
+      return 'gemini-4-neon';
+    }
     if (s.includes('carbon') || s.includes('gemini-4-carbon') || s.includes('m670')) {
       return 'gemini-4-carbon';
     }
@@ -48,6 +51,59 @@
     if (s.includes('claude')) return 'claude-sonnet-5-5';
     if (s.includes('gpt-oss') || s.includes('gpt')) return 'gpt-oss-120b';
     return s.replace(/[^a-z0-9_-]/g, '') || 'unknown';
+  }
+
+  /**
+   * 剥离宿主 Orchestrator 模式前缀/后缀/包裹壳，还原内部真实模型名或 ID；
+   * 仅识别以 Orchestrator 作为模式修饰语的格式，裸 "Orchestrator" 或无关字符串返回 null。
+   */
+  function stripOrchestratorModelWrapper(raw) {
+    if (typeof raw !== 'string') return null;
+    const s = raw.trim().replace(/\s+/g, ' ');
+    if (!s || !/orchestrator/i.test(s)) return null;
+
+    let out = null;
+    // a. 包裹形式：Orchestrator (Model Name) (Extra High) / Orchestrator Mode (Model Name)
+    let m = s.match(/^(?:model[_-])?orchestrator(?:\s*mode)?\s*\(([^()]+)\)(?:\s*(.*))?$/i);
+    if (m) {
+      const inner = (m[1] || '').trim();
+      const tail = (m[2] || '').trim();
+      out = tail ? `${inner} ${tail}`.trim() : inner;
+    }
+    // b. 分隔符/空白前缀：Orchestrator Gemini 4 Neon / Orchestrator · Claude Opus 5.5 / model_orchestrator_gemini_4_neon
+    if (!out) {
+      m = s.match(/^(?:model[_-])?orchestrator(?:\s+mode)?(?:\s*[:·•|/—–-]+\s*|\s+|[_-]+)(.+)$/i);
+      if (m) {
+        out = (m[1] || '').trim();
+      }
+    }
+    // c. 无空格粘连：OrchestratorGemini 4 Neon / orchestratorgemini 4 neon
+    if (!out) {
+      m = s.match(/^[Oo]rchestrator([A-Z].*)$/)
+        || s.match(/^(?:model[_-])?orchestrator((?:gemini|claude|gpt|openai|anthropic|deepseek|qwen|llama|mistral|grok|o[134](?=[\s._-]|$)).*)$/i);
+      if (m) {
+        out = (m[1] || '').trim();
+      }
+    }
+    // d. 后缀或内嵌括号后缀：Gemini 4 Neon (Orchestrator) (Extra High) / Gemini 4 Neon · Orchestrator
+    if (!out) {
+      m = s.match(/^(.+?)\s*\(\s*orchestrator(?:\s*mode)?\s*\)(?:\s*(.*))?$/i);
+      if (m) {
+        const head = (m[1] || '').trim();
+        const tail = (m[2] || '').trim();
+        out = tail ? `${head} ${tail}`.trim() : head;
+      } else {
+        m = s.match(/^(.+?)(?:\s*[:·•|/—–]+\s*|\s+-\s+)orchestrator(?:\s*mode)?$/i);
+        if (m) {
+          out = (m[1] || '').trim();
+        }
+      }
+    }
+
+    if (!out) return null;
+    out = out.replace(/^[:·•|/—–-]+\s*/, '').replace(/\s*[:·•|/—–-]+$/, '').trim();
+    if (!out || /^(?:mode|orchestrator(?:\s*mode)?)$/i.test(out)) return null;
+    return out;
   }
 
   function getSharedQuotaGroupKey(raw) {
@@ -341,18 +397,32 @@
     const rawStr = typeof modelIdOrName === 'object'
       ? String(modelIdOrName.modelId || modelIdOrName.modelOrAlias?.model || modelIdOrName.label || modelIdOrName.model || '')
       : String(modelIdOrName);
-    const poolKey = getModelPoolKey(rawStr);
-    const targetLower = rawStr.trim().toLowerCase();
-    const targetStripped = targetLower.replace(/^model_/, '');
+    const unwrappedStr = stripOrchestratorModelWrapper(rawStr);
+    const poolKey = getModelPoolKey(unwrappedStr || rawStr);
 
-    // 1. 优先精准匹配 modelId / modelOrAlias.model / model / label（兼容 MODEL_ 前缀）
-    let matched = cascadeModelConfigs.find(c => {
-      if (!c || typeof c !== 'object') return false;
-      const cands = [c.modelId, c.modelOrAlias?.model, c.model, c.label]
-        .filter(v => typeof v === 'string' && v.trim())
-        .map(v => v.trim().toLowerCase());
-      return cands.some(v => v === targetLower || v.replace(/^model_/, '') === targetStripped);
-    });
+    const findByCandidate = (candStr) => {
+      if (!candStr) return null;
+      const targetLower = candStr.trim().toLowerCase();
+      const targetStripped = targetLower.replace(/^model_/, '');
+      const targetNorm = normalizeModelLookupName(candStr);
+      // 1. 优先精准匹配 modelId / modelOrAlias.model / model / label（兼容 MODEL_ 前缀）
+      let hit = cascadeModelConfigs.find(c => {
+        if (!c || typeof c !== 'object') return false;
+        const cands = [c.modelId, c.modelOrAlias?.model, c.model, c.label]
+          .filter(v => typeof v === 'string' && v.trim())
+          .map(v => v.trim().toLowerCase());
+        return cands.some(v => v === targetLower || v.replace(/^model_/, '') === targetStripped);
+      });
+      if (hit) return hit;
+      // 1b. 次级按标准化展示名匹配（兼容 Extra High / XHigh 力度后缀差异）
+      if (targetNorm) {
+        hit = cascadeModelConfigs.find(c => c && typeof c === 'object' && normalizeModelLookupName(c.label) === targetNorm);
+        if (hit) return hit;
+      }
+      return null;
+    };
+
+    let matched = findByCandidate(rawStr) || (unwrappedStr ? findByCandidate(unwrappedStr) : null);
 
     // 2. 匹配同一产品组 / 配额池
     if (!matched && poolKey !== 'unknown') {
@@ -368,6 +438,7 @@
     const qi = matched.quotaInfo || {};
     const parsed = parseQuotaFraction(qi, { unavailable: avail.noPermission, schemaKind: 'codeium_quota_info' });
     const poolNames = {
+      'gemini-4-neon': 'Gemini 4 Neon 配额池',
       'gemini-4-argon': 'Gemini 4 Argon 配额池（周限额）',
       'gemini-4-hydrogen': 'Gemini 4 Hydrogen / 3.8 Flash 共享池',
       'gemini-3.8-flash': 'Gemini 3.8 Flash / Hydrogen 共享池',
@@ -1224,13 +1295,25 @@
     const candidates = [productLabel, modelId]
       .filter(v => typeof v === 'string' && v.trim())
       .map(v => v.trim().toLowerCase());
+    const matchDirectVendor = (s) => {
+      if (!s) return null;
+      if (s.startsWith('product:google:')) return 'Google';
+      if (s.startsWith('product:anthropic:')) return 'Anthropic';
+      if (s.startsWith('product:openai:')) return 'OpenAI';
+      if (/^(?:models\/)?(?:gemini|google|gemma|imagen|veo)\b/.test(s)) return 'Google';
+      if (/^(?:models\/)?(?:claude|anthropic)\b/.test(s)) return 'Anthropic';
+      if (/^(?:models\/)?(?:gpt|openai|o1|o3|o4|chatgpt|codex)\b/.test(s)) return 'OpenAI';
+      return null;
+    };
     for (const c of candidates) {
-      if (c.startsWith('product:google:')) return 'Google';
-      if (c.startsWith('product:anthropic:')) return 'Anthropic';
-      if (c.startsWith('product:openai:')) return 'OpenAI';
-      if (/^(?:models\/)?(?:gemini|google|gemma|imagen|veo)\b/.test(c)) return 'Google';
-      if (/^(?:models\/)?(?:claude|anthropic)\b/.test(c)) return 'Anthropic';
-      if (/^(?:models\/)?(?:gpt|openai|o1|o3|o4|chatgpt|codex)\b/.test(c)) return 'OpenAI';
+      const direct = matchDirectVendor(c);
+      if (direct) return direct;
+    }
+    for (const c of candidates) {
+      const unwrapped = stripOrchestratorModelWrapper(c);
+      if (!unwrapped) continue;
+      const fromUnwrapped = matchDirectVendor(unwrapped.toLowerCase());
+      if (fromUnwrapped) return fromUnwrapped;
     }
     return '其他';
   }
@@ -2956,6 +3039,147 @@
     };
   }
 
+  function matchModelQuotaTarget(pools, targetInput) {
+    if (!Array.isArray(pools) || !pools.length || !targetInput) {
+      return { pool: null, model: null };
+    }
+    const candidates = [];
+    const pushCand = (v) => {
+      if (typeof v !== 'string') return;
+      const s = v.trim();
+      if (s && !candidates.includes(s)) candidates.push(s);
+    };
+    let targetProductKey = '';
+    if (typeof targetInput === 'object') {
+      pushCand(targetInput.modelId);
+      pushCand(targetInput.modelOrAlias?.model);
+      pushCand(targetInput.modelRaw);
+      pushCand(targetInput.model);
+      pushCand(targetInput.label);
+      pushCand(targetInput.modelDisplayName);
+      pushCand(targetInput.productLabel);
+      if (typeof targetInput.productKey === 'string') {
+        targetProductKey = targetInput.productKey.trim().toLowerCase();
+      }
+    } else {
+      pushCand(String(targetInput));
+    }
+    if (!candidates.length && !targetProductKey) {
+      return { pool: null, model: null };
+    }
+
+    const matchModelListByCandidates = (candList, extraProductKey = '') => {
+      for (const cand of candList) {
+        const tLower = cand.toLowerCase();
+        const tStripped = tLower.replace(/^model_/, '');
+        for (const pool of pools) {
+          for (const m of (pool.models || [])) {
+            const allIds = [...(m.modelIds || []), ...(m.aliases || [])]
+              .map(x => String(x || '').trim().toLowerCase())
+              .filter(Boolean);
+            if (allIds.some(id => id === tLower || id.replace(/^model_/, '') === tStripped)) {
+              return { pool, model: m };
+            }
+          }
+        }
+      }
+      for (const cand of candList) {
+        const tLower = cand.toLowerCase();
+        const tNorm = normalizeModelLookupName(cand);
+        for (const pool of pools) {
+          for (const m of (pool.models || [])) {
+            if (m.productLabel && m.productLabel.trim().toLowerCase() === tLower) {
+              return { pool, model: m };
+            }
+            if (tNorm && normalizeModelLookupName(m.productLabel) === tNorm) {
+              return { pool, model: m };
+            }
+          }
+        }
+      }
+      if (extraProductKey) {
+        for (const pool of pools) {
+          for (const m of (pool.models || [])) {
+            if (m.productKey && m.productKey.toLowerCase() === extraProductKey) {
+              return { pool, model: m };
+            }
+          }
+        }
+      }
+      return null;
+    };
+
+    // Pass 1: 原始标识/展示名精确匹配（保留目录中显式的 Orchestrator (Argon) 等条目）
+    const exactHit = matchModelListByCandidates(candidates, targetProductKey);
+    if (exactHit) return exactHit;
+
+    // Pass 2: 剥离 Orchestrator 模式包裹后精确匹配内部真实模型
+    const unwrappedCandidates = [];
+    for (const cand of candidates) {
+      const unwrapped = stripOrchestratorModelWrapper(cand);
+      if (unwrapped && !unwrappedCandidates.includes(unwrapped)) {
+        unwrappedCandidates.push(unwrapped);
+      }
+    }
+    if (unwrappedCandidates.length) {
+      for (const u of unwrappedCandidates) {
+        const ug = groupModelProduct({ modelId: u, label: u });
+        const unwrappedHit = matchModelListByCandidates([u], ug?.productKey ? ug.productKey.toLowerCase() : '');
+        if (unwrappedHit) return unwrappedHit;
+      }
+      // Pass 2b: 若剥离后为单个代号词（如 Orchestrator (Neon) -> "Neon"），唯一匹配池内含该完整单词的模型
+      for (const u of unwrappedCandidates) {
+        const uNorm = normalizeModelLookupName(u);
+        if (!uNorm || uNorm.includes(' ')) continue;
+        const wordRe = new RegExp(`\\b${uNorm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`);
+        const matches = [];
+        for (const pool of pools) {
+          for (const m of (pool.models || [])) {
+            if (wordRe.test(normalizeModelLookupName(m.productLabel))) {
+              matches.push({ pool, model: m });
+            }
+          }
+        }
+        if (matches.length === 1) return matches[0];
+      }
+    }
+
+    // Pass 3: 按规范化模型池键 (getModelPoolKey) 匹配具体池内模型（支持 Ultra 统一池下的 Neon/Carbon/Argon）
+    const poolKeyProbeList = [...unwrappedCandidates, ...candidates];
+    const targetPoolKeys = [];
+    if (typeof targetInput === 'object') {
+      const objPk = getModelPoolKey(targetInput);
+      if (objPk && objPk !== 'unknown') targetPoolKeys.push(objPk);
+    }
+    for (const cand of poolKeyProbeList) {
+      const pk = getModelPoolKey(cand);
+      if (pk && pk !== 'unknown' && !targetPoolKeys.includes(pk)) targetPoolKeys.push(pk);
+    }
+    for (const tpk of targetPoolKeys) {
+      for (const pool of pools) {
+        for (const m of (pool.models || [])) {
+          const modelStrings = [m.productLabel, ...(m.modelIds || []), ...(m.aliases || [])].filter(Boolean);
+          if (modelStrings.some(ms => getModelPoolKey(ms) === tpk)) {
+            return { pool, model: m };
+          }
+        }
+      }
+    }
+
+    // Pass 4: 按共享额度组键兜底
+    const groupProbeInputs = [...unwrappedCandidates, targetInput, ...candidates];
+    for (const probe of groupProbeInputs) {
+      const gk = getSharedQuotaGroupKey(probe);
+      if (!gk || gk === 'unknown') continue;
+      const byGroup = pools.find(p => p.poolKey === gk);
+      if (byGroup) {
+        return { pool: byGroup, model: byGroup.models?.[0] || null };
+      }
+    }
+
+    return { pool: null, model: null };
+  }
+
   /**
    * 聚合账号下各共享额度池、产品档位与当前会话模型额度状态（纯函数）
    * 严格区分：available / low / exhausted / no_permission / stale / error / unknown
@@ -3010,15 +3234,30 @@
         };
       });
 
+      const gIdLower = String(g.groupId || '').trim().toLowerCase();
       const title = String(g.displayName || g.name || g.groupId || `配额组 ${idx + 1}`).trim();
-      let sharedKey = null;
+      const titleLower = title.toLowerCase();
+      const idAndTitle = `${gIdLower} ${titleLower}`.trim();
       const joinedHints = [g.groupId, title, desc, ...explicitModelNames].filter(Boolean).join(' ').toLowerCase();
-      if (joinedHints.includes('3p') || joinedHints.includes('claude') || joinedHints.includes('gpt-oss')) {
+      let sharedKey = null;
+      if (idAndTitle.includes('3p') || idAndTitle.includes('claude') || idAndTitle.includes('gpt-oss')) {
+        sharedKey = 'shared_3p_pool';
+      } else if (idAndTitle.includes('argon')) {
+        sharedKey = 'shared_gemini_argon';
+      } else if (idAndTitle.includes('carbon')) {
+        sharedKey = 'shared_gemini_carbon';
+      } else if (idAndTitle.includes('neon')) {
+        sharedKey = 'shared_gemini_neon';
+      } else if (gIdLower === 'gemini' || idAndTitle.includes('hydrogen') || idAndTitle.includes('flash') || /\bgemini\s+models\b/.test(titleLower)) {
+        sharedKey = 'shared_gemini_main';
+      } else if (joinedHints.includes('3p') || joinedHints.includes('claude') || joinedHints.includes('gpt-oss')) {
         sharedKey = 'shared_3p_pool';
       } else if (joinedHints.includes('argon')) {
         sharedKey = 'shared_gemini_argon';
       } else if (joinedHints.includes('carbon')) {
         sharedKey = 'shared_gemini_carbon';
+      } else if (joinedHints.includes('neon')) {
+        sharedKey = 'shared_gemini_neon';
       } else if (joinedHints.includes('hydrogen') || joinedHints.includes('flash')) {
         sharedKey = 'shared_gemini_main';
       } else {
@@ -3319,35 +3558,7 @@
     const pools = Array.from(poolMap.values());
 
     // 4. 匹配当前会话模型与浏览查看池（浏览不修改 currentModel）
-    const findMatchedForTarget = (targetInput) => {
-      if (!targetInput) return { pool: null, model: null };
-      const targetStr = typeof targetInput === 'object'
-        ? String(targetInput.modelId || targetInput.modelOrAlias?.model || targetInput.label || targetInput.model || '')
-        : String(targetInput);
-      const tLower = targetStr.trim().toLowerCase();
-      const tStripped = tLower.replace(/^model_/, '');
-      const tNorm = normalizeModelLookupName(targetStr);
-
-      for (const pool of pools) {
-        for (const m of pool.models) {
-          const allIds = [...m.modelIds, ...m.aliases].map(x => x.toLowerCase());
-          if (allIds.some(id => id === tLower || id.replace(/^model_/, '') === tStripped)) {
-            return { pool, model: m };
-          }
-          if (tNorm && normalizeModelLookupName(m.productLabel) === tNorm) {
-            return { pool, model: m };
-          }
-        }
-      }
-      const fallbackGroup = getSharedQuotaGroupKey(targetInput);
-      const byGroup = pools.find(p => p.poolKey === fallbackGroup);
-      if (byGroup) {
-        return { pool: byGroup, model: byGroup.models[0] || null };
-      }
-      return { pool: null, model: null };
-    };
-
-    const currentMatch = findMatchedForTarget(input.currentModel);
+    const currentMatch = matchModelQuotaTarget(pools, input.currentModel);
     const browsePool = input.browsePoolKey
       ? (pools.find(p => p.poolKey === input.browsePoolKey) || currentMatch.pool || pools[0] || null)
       : (currentMatch.pool || pools[0] || null);
@@ -5865,6 +6076,9 @@
     resolveModelQuota,
     getModelPoolKey,
     getSharedQuotaGroupKey,
+    stripOrchestratorModelWrapper,
+    normalizeModelLookupName,
+    matchModelQuotaTarget,
     parseQuotaFraction,
     formatQuotaPercentText,
     formatQuotaResetMeta,

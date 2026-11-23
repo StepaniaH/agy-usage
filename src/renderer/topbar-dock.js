@@ -631,15 +631,33 @@
   let lastObservedHostModelSig = null;
   let hostModelSyncTimer = null;
   let domMutationThrottleTimer = null;
+  function findVisibleHostModelTrigger() {
+    if (typeof document === 'undefined') return null;
+    const list = typeof document.querySelectorAll === 'function'
+      ? Array.from(document.querySelectorAll('[data-testid="model-selector-trigger"]'))
+      : (typeof document.querySelector === 'function' ? [document.querySelector('[data-testid="model-selector-trigger"]')].filter(Boolean) : []);
+    for (const cand of list) {
+      if (!cand) continue;
+      if (host && typeof host.contains === 'function' && host.contains(cand)) continue;
+      if (typeof cand.closest === 'function' && cand.closest('#ag-context-meter')) continue;
+      if (typeof cand.getBoundingClientRect === 'function') {
+        const rect = cand.getBoundingClientRect();
+        if (rect && rect.width === 0 && rect.height === 0) continue;
+      }
+      return cand;
+    }
+    return null;
+  }
+
   function scheduleHostModelSync() {
     try {
-      if (state.disposed || typeof document === 'undefined' || typeof document.querySelector !== 'function') return;
+      if (state.disposed || typeof document === 'undefined' || (typeof document.querySelector !== 'function' && typeof document.querySelectorAll !== 'function')) return;
       if (hostModelSyncTimer) return;
       hostModelSyncTimer = setTimeout(() => {
         hostModelSyncTimer = null;
         try {
-          if (state.disposed || typeof document === 'undefined' || typeof document.querySelector !== 'function') return;
-          const trig = document.querySelector('[data-testid="model-selector-trigger"]');
+          if (state.disposed || typeof document === 'undefined') return;
+          const trig = findVisibleHostModelTrigger();
           const nextSig = trig ? `${trig.getAttribute?.('aria-label') || ''}|${trig.textContent || ''}` : '';
           if (nextSig === lastObservedHostModelSig) return;
           lastObservedHostModelSig = nextSig;

@@ -530,14 +530,17 @@
     if (activeSessionModelConfirmed && (activeSessionModelKey || activeSessionProductKey)) {
       const cfgList = state.cascadeModelConfigs || state.scan?.cascadeModelConfigs || [];
       const activeKeyLower = String(activeSessionModelKey || '').trim().toLowerCase();
-      const matched = activeKeyLower ? cfgList.find(c =>
-        String(c?.modelId || '').trim().toLowerCase() === activeKeyLower ||
-        String(c?.modelOrAlias?.model || '').trim().toLowerCase() === activeKeyLower
-      ) : null;
+      const activeKeyStripped = activeKeyLower.replace(/^model_/, '');
+      const matched = activeKeyLower ? cfgList.find(c => {
+        const mId = String(c?.modelId || '').trim().toLowerCase();
+        const aliasId = String(c?.modelOrAlias?.model || '').trim().toLowerCase();
+        return (mId && (mId === activeKeyLower || mId.replace(/^model_/, '') === activeKeyStripped))
+          || (aliasId && (aliasId === activeKeyLower || aliasId.replace(/^model_/, '') === activeKeyStripped));
+      }) : null;
       if (matched) return matched;
       return {
         modelId: activeSessionModelKey || '',
-        label: state.latest?.model || activeSessionModelKey || activeSessionProductKey,
+        label: activeSessionModelLabel || state.latest?.model || activeSessionModelKey || activeSessionProductKey,
         productKey: activeSessionProductKey || ''
       };
     }
@@ -683,38 +686,44 @@
     });
 
     // 针对实时切换后的会话模型重新匹配池与模型
-    const tStr = currentModelInput
-      ? String(currentModelInput.modelId || currentModelInput.label || '').trim().toLowerCase()
-      : '';
-    const tStripped = tStr.replace(/^model_/, '');
     let matchedPool = null;
     let matchedModel = null;
-    if (tStr) {
-      for (const p of updatedPools) {
-        for (const m of (p.models || [])) {
-          const allIds = [...(m.modelIds || []), ...(m.aliases || [])].map(x => String(x).toLowerCase());
-          if (allIds.some(id => id === tStr || id.replace(/^model_/, '') === tStripped)) {
-            matchedPool = p;
-            matchedModel = m;
-            break;
+    if (currentModelInput) {
+      if (core?.matchModelQuotaTarget) {
+        const matchedTarget = core.matchModelQuotaTarget(updatedPools, currentModelInput);
+        matchedPool = matchedTarget?.pool || null;
+        matchedModel = matchedTarget?.model || null;
+      } else {
+        const tStr = String(currentModelInput.modelId || currentModelInput.label || '').trim().toLowerCase();
+        const tStripped = tStr.replace(/^model_/, '');
+        if (tStr) {
+          for (const p of updatedPools) {
+            for (const m of (p.models || [])) {
+              const allIds = [...(m.modelIds || []), ...(m.aliases || [])].map(x => String(x).toLowerCase());
+              if (allIds.some(id => id === tStr || id.replace(/^model_/, '') === tStripped)) {
+                matchedPool = p;
+                matchedModel = m;
+                break;
+              }
+              if (m.productLabel && m.productLabel.toLowerCase() === tStr) {
+                matchedPool = p;
+                matchedModel = m;
+                break;
+              }
+              if (m.productKey && currentModelInput?.productKey && m.productKey === currentModelInput.productKey) {
+                matchedPool = p;
+                matchedModel = m;
+                break;
+              }
+            }
+            if (matchedPool) break;
           }
-          if (m.productLabel && m.productLabel.toLowerCase() === tStr) {
-            matchedPool = p;
-            matchedModel = m;
-            break;
-          }
-          if (m.productKey && currentModelInput?.productKey && m.productKey === currentModelInput.productKey) {
-            matchedPool = p;
-            matchedModel = m;
-            break;
+          if (!matchedPool && core?.getSharedQuotaGroupKey) {
+            const gKey = core.getSharedQuotaGroupKey(currentModelInput);
+            matchedPool = updatedPools.find(p => p.poolKey === gKey) || null;
+            if (matchedPool) matchedModel = matchedPool.models?.[0] || null;
           }
         }
-        if (matchedPool) break;
-      }
-      if (!matchedPool && core?.getSharedQuotaGroupKey) {
-        const gKey = core.getSharedQuotaGroupKey(currentModelInput);
-        matchedPool = updatedPools.find(p => p.poolKey === gKey) || null;
-        if (matchedPool) matchedModel = matchedPool.models?.[0] || null;
       }
     }
 

@@ -2714,3 +2714,186 @@ test('隔离额度请求遇到窗口未就绪、CSRF 缺失及 401/403 鉴权失
   assert.notEqual(authFailRes.snapshot.activeStatus, 'exhausted');
   assert.notEqual(authFailRes.snapshot.activeStatus, 'no_permission');
 });
+
+test('Ultra 统一 Gemini Models 池归属与 Orchestrator 模式全链路额度匹配', async () => {
+  const nowMs = Date.now();
+  const future5hIso = new Date(nowMs + 5 * 3600000 - 120000).toISOString();
+  const futureWeekGeminiIso = new Date(nowMs + 5 * 86400000 + 5 * 3600000).toISOString();
+  const futureWeek3pIso = new Date(nowMs + 5 * 86400000 + 2 * 3600000).toISOString();
+
+  const ultraUserStatus = {
+    userStatus: {
+      email: 'ultra.orch@example.com',
+      userTier: { id: 'g1-ultra-tier', name: 'Google AI Ultra', description: 'Google AI Ultra' },
+      planStatus: { planInfo: { teamsTier: 'TEAMS_TIER_PRO', planName: 'Pro' } },
+      cascadeModelConfigData: {
+        clientModelConfigs: [
+          { modelId: 'gemini-4-neon-xhigh', label: 'Gemini 4 Neon (XHigh)', modelOrAlias: { model: 'MODEL_PLACEHOLDER_M701' }, quotaInfo: { remainingFraction: 0.75, resetTime: futureWeekGeminiIso } },
+          { modelId: 'gemini-4-carbon-high', label: 'Gemini 4 Carbon (High)', modelOrAlias: { model: 'MODEL_PLACEHOLDER_M670' }, quotaInfo: { remainingFraction: 0.75, resetTime: futureWeekGeminiIso } },
+          { modelId: 'gemini-4-argon-high', label: 'Gemini 4 Argon (High)', modelOrAlias: { model: 'MODEL_PLACEHOLDER_M66' }, quotaInfo: { remainingFraction: 0.75, resetTime: futureWeekGeminiIso } },
+          { modelId: 'gemini-4-hydrogen-high', label: 'Gemini 4 Hydrogen (High)', modelOrAlias: { model: 'MODEL_PLACEHOLDER_M28' }, quotaInfo: { remainingFraction: 0.75, resetTime: futureWeekGeminiIso } },
+          { modelId: 'gemini-3.8-flash-medium', label: 'Gemini 3.8 Flash (Medium)', modelOrAlias: { model: 'MODEL_PLACEHOLDER_M38' }, quotaInfo: { remainingFraction: 0.75, resetTime: futureWeekGeminiIso } },
+          { modelId: 'claude-opus-5-5-high', label: 'Claude Opus 5.5 (High)', modelOrAlias: { model: 'MODEL_PLACEHOLDER_M41' }, quotaInfo: { remainingFraction: 0.97, resetTime: futureWeek3pIso } },
+          { modelId: 'claude-sonnet-5-5-medium', label: 'Claude Sonnet 5.5 (Medium)', modelOrAlias: { model: 'MODEL_PLACEHOLDER_M42' }, quotaInfo: { remainingFraction: 0.97, resetTime: futureWeek3pIso } },
+          { modelId: 'gpt-oss-120b-medium', label: 'GPT-OSS 120B (Medium)', modelOrAlias: { model: 'MODEL_OPENAI_GPT_OSS_120B_MEDIUM' }, quotaInfo: { remainingFraction: 0.97, resetTime: futureWeek3pIso } }
+        ]
+      }
+    }
+  };
+  const ultraQuotaSummary = {
+    response: {
+      groups: [
+        {
+          groupId: 'gemini',
+          displayName: 'Gemini Models',
+          description: 'Models within this group: Gemini 4 Neon, Gemini 4 Carbon, Gemini 4 Argon, Gemini 4 Hydrogen, Gemini 3.8 Flash',
+          buckets: [
+            { bucketId: 'gemini-weekly', window: 'weekly', remainingFraction: 0.75, resetTime: futureWeekGeminiIso },
+            { bucketId: 'gemini-5h', window: '5h', remainingFraction: 1, resetTime: future5hIso }
+          ]
+        },
+        {
+          groupId: '3p',
+          displayName: 'Claude and GPT models',
+          description: 'Models within this group: Claude Opus 5.5, Claude Sonnet 5.5, GPT-OSS 120B',
+          buckets: [
+            { bucketId: '3p-weekly', window: 'weekly', remainingFraction: 0.97, resetTime: futureWeek3pIso },
+            { bucketId: '3p-5h', window: '5h', remainingFraction: 1, resetTime: future5hIso }
+          ]
+        }
+      ]
+    }
+  };
+
+  // 1. 纯函数快照校验：Gemini Models 不得被描述里的 Argon 劫持为 shared_gemini_argon，且能匹配多种 Orchestrator 命名
+  const snapNeonTitle = core.buildModelQuotaSnapshot({
+    userStatusRes: ultraUserStatus,
+    quotaSummaryRes: ultraQuotaSummary,
+    currentModel: 'Orchestrator Gemini 4 Neon (Extra High)',
+    fetchMeta: { fetchedAtMs: nowMs },
+    nowMs
+  });
+  const geminiPool = snapNeonTitle.pools.find(p => p.poolKey === 'shared_gemini_main');
+  assert.ok(geminiPool, 'groupId=gemini / Gemini Models 应归属 shared_gemini_main 而非 shared_gemini_argon');
+  assert.equal(snapNeonTitle.currentModel?.productLabel, 'Gemini 4 Neon');
+  assert.equal(snapNeonTitle.currentModel?.poolKey, 'shared_gemini_main');
+  assert.equal(snapNeonTitle.activeStatus, 'available');
+  assert.equal(snapNeonTitle.badge.text, '75%');
+
+  const snapNeonLower = core.buildModelQuotaSnapshot({
+    userStatusRes: ultraUserStatus,
+    quotaSummaryRes: ultraQuotaSummary,
+    currentModel: 'orchestrator gemini 4 neon (extra high)',
+    fetchMeta: { fetchedAtMs: nowMs },
+    nowMs
+  });
+  assert.equal(snapNeonLower.currentModel?.productLabel, 'Gemini 4 Neon');
+  assert.equal(snapNeonLower.badge.text, '75%');
+
+  const snapClaudeOrch = core.buildModelQuotaSnapshot({
+    userStatusRes: ultraUserStatus,
+    quotaSummaryRes: ultraQuotaSummary,
+    currentModel: 'Orchestrator Claude Opus 5.5 (High)',
+    fetchMeta: { fetchedAtMs: nowMs },
+    nowMs
+  });
+  assert.equal(snapClaudeOrch.currentModel?.productLabel, 'Claude Opus 5.5');
+  assert.equal(snapClaudeOrch.currentModel?.poolKey, 'shared_3p_pool');
+  assert.equal(snapClaudeOrch.badge.text, '97%');
+
+  // 2. 渲染层集成：宿主 DOM model-selector-trigger 处于 Orchestrator 模式（含无空格粘连、符号分隔及空目录冷启动生产路径）
+  const h = createQuotaRendererHarness();
+  try {
+    for (const req of h.quotaRequests) {
+      req.resolve({ ok: false, error: 'init-noop' });
+    }
+    await h.flush();
+
+    let triggerText = 'Orchestrator Gemini 4 Neon (Extra High)';
+    const origQsa = h.sandbox.document.querySelectorAll;
+    const origQs = h.sandbox.document.querySelector;
+    const mockTrigger = {
+      tagName: 'BUTTON',
+      getAttribute: n => (n === 'data-testid' ? 'model-selector-trigger' : n === 'aria-label' ? `Select model, current: ${triggerText}` : null),
+      closest: () => null,
+      getBoundingClientRect: () => ({ left: 490, top: 795, width: 220, height: 28 }),
+      querySelector: () => null,
+      querySelectorAll: () => [],
+      cloneNode: () => ({ querySelectorAll: () => [], textContent: triggerText }),
+      get textContent() { return triggerText; }
+    };
+    h.sandbox.document.querySelectorAll = sel => (sel === '[data-testid="model-selector-trigger"]' ? [mockTrigger] : origQsa(sel));
+    h.sandbox.document.querySelector = sel => (sel === '[data-testid="model-selector-trigger"]' ? mockTrigger : origQs(sel));
+
+    const api = h.sandbox.__AGContextMeter;
+    const configs = ultraUserStatus.userStatus.cascadeModelConfigData.clientModelConfigs;
+    const prebuiltSnapshot = core.buildModelQuotaSnapshot({
+      userStatusRes: ultraUserStatus,
+      quotaSummaryRes: ultraQuotaSummary,
+      fetchMeta: { fetchedAtMs: nowMs },
+      nowMs
+    });
+
+    // 2a. 生产路径 (snapshot) + 空 state.cascadeModelConfigs 冷启动下，DOM 为 Orchestrator Gemini 4 Neon (Extra High)
+    api.setQuotaSnapshotForTest({
+      accountScopeKey: 'acct_ultra_orch',
+      fetchedAtMs: nowMs,
+      lastSuccessAtMs: nowMs,
+      snapshot: prebuiltSnapshot
+    }, nowMs);
+    api.setContextLatestForTest(null, []);
+    const coldView = api.getModelQuotaStateForTest(nowMs).view;
+    assert.equal(coldView.activeStatus, 'available');
+    assert.equal(h.elements.get('quota-badge-val').textContent, '75%');
+    assert.equal(h.elements.get('quota-cur-model').textContent, 'Gemini 4 Neon');
+    assert.equal(h.elements.get('quota-cur-status').textContent, '正常可用');
+
+    // 2b. 注入完整 configs 后，验证 Orchestrator Gemini 4 Neon (Extra High) 与 Gemini 4 Neon (XHigh) 映射及池卡片高亮
+    api.setContextLatestForTest(null, configs);
+    assert.equal(h.elements.get('quota-badge-val').textContent, '75%');
+    assert.equal(h.elements.get('quota-cur-model').textContent, 'Gemini 4 Neon');
+    const geminiCard = h.elements.get('quota-pools-list').children.find(c => c.getAttribute('data-pool-key') === 'shared_gemini_main');
+    assert.ok(geminiCard);
+    assert.equal(geminiCard.getAttribute('data-active-current'), 'true');
+
+    // 2c. 无空格粘连变体：OrchestratorGemini 4 Neon Extra High
+    triggerText = 'OrchestratorGemini 4 Neon Extra High';
+    api.setContextLatestForTest(null, configs);
+    assert.equal(h.elements.get('quota-badge-val').textContent, '75%');
+    assert.equal(h.elements.get('quota-cur-model').textContent, 'Gemini 4 Neon');
+
+    // 2d. 符号分隔变体：Orchestrator · Claude Opus 5.5 (High) -> 97%
+    triggerText = 'Orchestrator · Claude Opus 5.5 (High)';
+    api.setContextLatestForTest(null, configs);
+    assert.equal(h.elements.get('quota-badge-val').textContent, '97%');
+    assert.equal(h.elements.get('quota-cur-model').textContent, 'Claude Opus 5.5');
+
+    // 2e. 回归：2.32.1 显式 Orchestrator (Argon) 仍归属 shared_gemini_argon (87%)
+    const legacy2321 = buildRealistic2321Fixtures(
+      new Date(nowMs).toISOString(),
+      future5hIso,
+      futureWeekGeminiIso,
+      new Date(nowMs + 6 * 86400000).toISOString()
+    );
+    triggerText = 'Orchestrator (Argon)';
+    api.setContextLatestForTest(null, legacy2321.userStatusRes.userStatus.cascadeModelConfigData.clientModelConfigs);
+    api.setQuotaSnapshotForTest({
+      accountScopeKey: 'acct_legacy_2321_orch',
+      fetchedAtMs: legacy2321.nowMs,
+      userStatusRes: legacy2321.userStatusRes,
+      quotaSummaryRes: legacy2321.quotaSummaryRes
+    }, legacy2321.nowMs);
+    const legacyView = api.getModelQuotaStateForTest(legacy2321.nowMs).view;
+    assert.equal(legacyView.currentModel?.poolKey, 'shared_gemini_argon');
+    assert.equal(h.elements.get('quota-badge-val').textContent, '87%');
+
+    // 2f. Pro 套餐下无权限 Carbon 在 Orchestrator 模式中仍严格显示无权限，绝不串用 Gemini 主池
+    triggerText = 'Orchestrator Gemini 4 Carbon (High)';
+    api.setContextLatestForTest(null, legacy2321.userStatusRes.userStatus.cascadeModelConfigData.clientModelConfigs);
+    const proCarbonView = api.getModelQuotaStateForTest(legacy2321.nowMs).view;
+    assert.equal(proCarbonView.activeStatus, 'no_permission');
+    assert.equal(h.elements.get('quota-badge-val').textContent, '无权限');
+  } finally {
+    h.sandbox.__AGContextMeter.dispose();
+  }
+});

@@ -3826,3 +3826,47 @@ test('computeBillingCycleRange, aggregateDailyCostRange, and unpricedByModel tra
   assert.equal(agg.costEstimate.byModel['gemini-4-carbon'].costUSD, 4);
   assert.equal(agg.costEstimate.unpricedByModel['Gemini 4 Neon'].tokens, 22200000);
 });
+
+test('Orchestrator 模式剥离、Neon 池归属、厂商识别与 resolveModelQuota 匹配', () => {
+  const {
+    stripOrchestratorModelWrapper,
+    getModelPoolKey,
+    resolveModelQuota
+  } = require('./meter-core');
+
+  assert.equal(stripOrchestratorModelWrapper('Orchestrator Gemini 4 Neon (Extra High)'), 'Gemini 4 Neon (Extra High)');
+  assert.equal(stripOrchestratorModelWrapper('orchestrator gemini 4 neon (extra high)'), 'gemini 4 neon (extra high)');
+  assert.equal(stripOrchestratorModelWrapper('Orchestrator · Claude Opus 5.5 (High)'), 'Claude Opus 5.5 (High)');
+  assert.equal(stripOrchestratorModelWrapper('OrchestratorGemini 4 Neon'), 'Gemini 4 Neon');
+  assert.equal(stripOrchestratorModelWrapper('Orchestrator (Gemini 4 Neon) (Extra High)'), 'Gemini 4 Neon (Extra High)');
+  assert.equal(stripOrchestratorModelWrapper('Orchestrator (Argon)'), 'Argon');
+  assert.equal(stripOrchestratorModelWrapper('Gemini 4 Neon (Orchestrator)'), 'Gemini 4 Neon');
+  assert.equal(stripOrchestratorModelWrapper('Gemini 4 Neon - Orchestrator'), 'Gemini 4 Neon');
+  assert.equal(stripOrchestratorModelWrapper('gemini-pro-orchestrator'), null);
+  assert.equal(stripOrchestratorModelWrapper('gemini-pro-orchestrator-xenon'), null);
+  assert.equal(stripOrchestratorModelWrapper('Orchestrator'), null);
+  assert.equal(stripOrchestratorModelWrapper('Orchestrator Mode'), null);
+  assert.equal(stripOrchestratorModelWrapper('Gemini 4 Hydrogen (High)'), null);
+
+  assert.equal(getModelPoolKey('Gemini 4 Neon'), 'gemini-4-neon');
+  assert.equal(getModelPoolKey('gemini-4-neon-medium'), 'gemini-4-neon');
+  assert.equal(getModelPoolKey('Orchestrator Gemini 4 Neon (Extra High)'), 'gemini-4-neon');
+
+  assert.equal(detectModelVendor('Orchestrator Gemini 4 Neon', 'orchestrator gemini 4 neon (extra high)'), 'Google');
+  assert.equal(detectModelVendor('Orchestrator Claude Opus 5.5', 'orchestrator claude opus 5.5'), 'Anthropic');
+  assert.equal(detectModelVendor('Orchestrator (Argon)', 'orchestrator-argon'), '其他');
+  assert.equal(detectModelVendor('Orchestrator (Carbon)', 'orchestrator-carbon'), '其他');
+
+  const neonQuota = resolveModelQuota('Orchestrator Gemini 4 Neon (Extra High)', [
+    {
+      modelId: 'gemini-4-neon-xhigh',
+      label: 'Gemini 4 Neon (XHigh)',
+      modelOrAlias: { model: 'MODEL_PLACEHOLDER_M700' },
+      quotaInfo: { remainingFraction: 0.75, resetTime: '2026-11-28T16:48:00Z' }
+    }
+  ]);
+  assert.ok(neonQuota);
+  assert.equal(neonQuota.poolKey, 'gemini-4-neon');
+  assert.equal(neonQuota.remainingFraction, 0.75);
+  assert.equal(neonQuota.noPermission, false);
+});
